@@ -40,10 +40,18 @@ type iterState struct {
 	length int
 }
 
+type frame struct {
+	stack  []Value
+	locals []Value
+	iters  []iterState
+}
+
 type Interp struct {
 	out    []byte
 	loader Loader
 	blocks map[string]*Program
+	frames []frame
+	depth  int
 }
 
 func NewInterp(loader Loader) *Interp {
@@ -53,14 +61,49 @@ func NewInterp(loader Loader) *Interp {
 func (ip *Interp) Run(prog *Program, data Value, blocks map[string]*Program) ([]byte, error) {
 	ip.out = ip.out[:0]
 	ip.blocks = blocks
+	ip.depth = 0
 	if err := ip.exec(prog, data); err != nil {
 		return nil, err
 	}
 	return ip.out, nil
 }
 
-func buildIter(spec *LoopSpec, coll Value) *iterState {
-	it := &iterState{spec: spec}
+const minStackCap = 32
+
+func (ip *Interp) exec(prog *Program, data Value) error {
+	if ip.depth >= len(ip.frames) {
+		ip.frames = append(ip.frames, frame{})
+	}
+	idx := ip.depth
+	ip.depth++
+	err := ip.runFrame(prog, data, idx)
+	ip.depth--
+	return err
+}
+
+func (ip *Interp) frameLocals(idx, n int) []Value {
+	fr := &ip.frames[idx]
+	if cap(fr.locals) < n {
+		fr.locals = make([]Value, n)
+		return fr.locals
+	}
+	locals := fr.locals[:n]
+	for i := range locals {
+		locals[i] = Value{}
+	}
+	return locals
+}
+
+func (ip *Interp) frameStack(idx int) []Value {
+	fr := &ip.frames[idx]
+	if cap(fr.stack) < minStackCap {
+		fr.stack = make([]Value, 0, minStackCap)
+	}
+	return fr.stack[:0]
+}
+
+func buildIter(spec *LoopSpec, coll Value) iterState {
+	it := iterState{spec: spec}
 	if coll.kind != KindObject {
 		return it
 	}
@@ -88,16 +131,16 @@ func buildIter(spec *LoopSpec, coll Value) *iterState {
 	return it
 }
 
-func (ip *Interp) exec(prog *Program, data Value) error {
+func (ip *Interp) runFrame(prog *Program, data Value, frameIdx int) error {
 	instrs := prog.Instrs
 	consts := prog.Consts
 	callables := prog.Callables
 	loops := prog.Loops
 	autoescape := prog.Autoescape
 
-	locals := make([]Value, prog.NumLocals)
-	stack := make([]Value, 0, 32)
-	var iters []iterState
+	locals := ip.frameLocals(frameIdx, prog.NumLocals)
+	stack := ip.frameStack(frameIdx)
+	iters := ip.frames[frameIdx].iters[:0]
 
 	out := ip.out
 	pc := 0
@@ -291,7 +334,7 @@ func (ip *Interp) exec(prog *Program, data Value) error {
 				pc = spec.ElseTarget
 				continue
 			}
-			iters = append(iters, *it)
+			iters = append(iters, it)
 
 		case OpIterNext:
 			it := &iters[len(iters)-1]
@@ -352,6 +395,9 @@ func (ip *Interp) exec(prog *Program, data Value) error {
 		pc++
 	}
 
+	fr := &ip.frames[frameIdx]
+	fr.stack = stack[:0]
+	fr.iters = iters[:0]
 	ip.out = out
 	return nil
 }
