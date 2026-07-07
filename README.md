@@ -1,18 +1,27 @@
-# Veloz
+<img src="docs/assets/banner.png" alt="Veloz. A template engine for Go. Twig-style templates, compiled to bytecode, executed on a stack VM. 7x faster loops, 0 fixed allocs per render, 0 dependencies, MIT licensed.">
 
-[![CI](https://github.com/victoragudo/go-veloz/actions/workflows/ci.yml/badge.svg)](https://github.com/victoragudo/go-veloz/actions/workflows/ci.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/victoragudo/go-veloz.svg)](https://pkg.go.dev/github.com/victoragudo/go-veloz)
-[![License: MIT](https://img.shields.io/badge/License-MIT-red.svg)](LICENSE)
+<p align="center">
+  <a href="https://github.com/victoragudo/go-veloz/actions/workflows/ci.yml"><img src="https://github.com/victoragudo/go-veloz/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://pkg.go.dev/github.com/victoragudo/go-veloz"><img src="https://pkg.go.dev/badge/github.com/victoragudo/go-veloz.svg" alt="Go Reference"></a>
+  <a href="https://goreportcard.com/report/github.com/victoragudo/go-veloz"><img src="https://goreportcard.com/badge/github.com/victoragudo/go-veloz" alt="Go Report Card"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-ff4630.svg" alt="License: MIT"></a>
+</p>
 
-A fast template engine for Go with a Twig/Blade style syntax. Templates compile once to compact bytecode and run on a stack virtual machine, up to 7x faster than `text/template` with 12x fewer allocations.
-
-**[Website](https://victoragudo.github.io/go-veloz/) · [Documentation](https://victoragudo.github.io/go-veloz/docs.html)**
-
-## Install
+<p align="center">
+  <b><a href="https://victoragudo.github.io/go-veloz/">Website</a></b> ·
+  <b><a href="https://victoragudo.github.io/go-veloz/docs.html">Documentation</a></b> ·
+  <b><a href="#built-for-speed">Benchmarks</a></b>
+</p>
 
 ```
 go get github.com/victoragudo/go-veloz
 ```
+
+## Parse once. Run at redline.
+
+Most engines walk the syntax tree on every render. Veloz resolves variable paths, binds filters and lays out control flow **once, at compile time**. What runs at request time is compact bytecode on a pooled stack VM: no reflection walks, no tree traversal, no fixed allocations.
+
+<img src="docs/assets/pipeline.png" alt="Pipeline: a Twig-style template compiles once to bytecode instructions like LOAD_VAR, ITER_NEXT and ECHO, then renders HTML output on every render.">
 
 ## Quick start
 
@@ -27,19 +36,18 @@ import (
 
 func main() {
     engine := veloz.New()
+
     tmpl, err := engine.Compile("hello", "Hola {{ name | capitalize }}!")
     if err != nil {
         panic(err)
     }
-    out, err := tmpl.Render(map[string]any{"name": "mireia"})
-    if err != nil {
-        panic(err)
-    }
+
+    out, _ := tmpl.Render(map[string]any{"name": "mireia"})
     fmt.Println(out)
 }
 ```
 
-## A taste of the syntax
+If you have written Twig, Jinja or Blade, you already know the language:
 
 ```twig
 {% extends "layout" %}
@@ -52,36 +60,31 @@ Client: {{ client ?: "guest" }}
 {% endblock %}
 ```
 
-## Features
+## Built for speed
 
-- Twig style expressions: ternary, elvis `?:`, `in`, string concat `~`, power `**`, negative indexing, array and map literals
-- Template inheritance with `extends` and `block`, plus `include` for partials
-- Real loop context: `loop.index`, `first`, `last`, `revindex`, `length`, key-value iteration and `for/else`
-- 20 built-in filters, custom filters and functions in one call
-- HTML autoescape by default, with `raw` and `SafeString` escape hatches
-- Compile time checks: unknown filters and broken tags fail at `Compile`, not in production
-- Zero dependencies, safe for concurrent use, pooled interpreters with no fixed allocations per render
+Same templates, same data, **byte-identical output** verified in the test suite. Run them yourself with `go test -bench . -benchmem`.
 
-## Performance
+<img src="docs/assets/benchmarks.png" alt="Benchmarks against text/template: 6.9x faster loops, 3.7x faster escaped output, 2.3x faster with every feature at once, 1.5x faster and 12x less memory on a 100,000 row inheritance page.">
 
-Rendering the same templates with byte-identical output, Apple M5, Go 1.22:
+## Everything on board
 
-| Scenario | Veloz | text/template | Speedup |
-|---|---|---|---|
-| Loop with loop context, 100 rows | 21.3 µs | 147.7 µs | 6.9x |
-| Escaped HTML output | 0.44 µs | 1.60 µs | 3.7x |
-| Full feature template | 11.8 µs | 27.4 µs | 2.3x |
-| Inheritance page, 100k rows | 16.8 ms | 25.1 ms | 1.5x |
-
-Run them yourself with `go test -bench . -benchmem`.
+| | |
+|---|---|
+| **Twig-style expressions** | Ternary, elvis `?:`, `in`, string concat `~`, power `**`, negative indexing, array and map literals |
+| **Template inheritance** | `extends`, `block` with defaults and overrides, `include` for partials, cycle detection |
+| **Real loop context** | `loop.index`, `first`, `last`, `revindex`, `length`, key-value iteration, `for/else` for empty lists |
+| **20 built-in filters** | From `capitalize` to `nl2br`, plus custom filters and functions registered in one call |
+| **Safe by default** | HTML autoescape with `raw` and `SafeString` escape hatches |
+| **Fails at compile time** | Unknown filters and broken tags break `Compile`, never a production render |
+| **Zero dependencies** | Standard library only, concurrent-safe engine, pooled interpreters |
 
 ## Documentation
 
-The full reference lives at [victoragudo.github.io/go-veloz/docs.html](https://victoragudo.github.io/go-veloz/docs.html): expressions, filters, functions, loops, inheritance, autoescape and the Go API, each with examples.
+The full reference lives at **[victoragudo.github.io/go-veloz/docs.html](https://victoragudo.github.io/go-veloz/docs.html)**: expressions, filters, functions, loops, inheritance, autoescape and the Go API, each with examples and their exact output.
 
 ## Contributing
 
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+Contributions are welcome. `main` only accepts pull requests with green CI and a maintainer review. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

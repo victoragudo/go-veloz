@@ -490,9 +490,12 @@ out, err := tmpl.<span class="tok-var">Render</span>(<span class="tok-tag">map</
       });
     }
   }
+  var CACHE_TTL_MS = 10 * 60 * 1000;
   var cached = null;
   try { cached = JSON.parse(sessionStorage.getItem("veloz-gh") || "null"); } catch (e) {}
-  if (cached) { applyGh(cached); return; }
+  var hasData = cached && (typeof cached.stars === "number" || cached.version);
+  if (hasData) applyGh(cached);
+  if (hasData && cached.at && Date.now() - cached.at < CACHE_TTL_MS) return;
   var info = {};
   fetch(API)
     .then(function (r) { return r.ok ? r.json() : null; })
@@ -508,6 +511,7 @@ out, err := tmpl.<span class="tok-var">Render</span>(<span class="tok-tag">map</
     .then(function (tags) {
       if (tags && tags.length) info.version = tags[0].name;
       applyGh(info);
+      info.at = Date.now();
       try { sessionStorage.setItem("veloz-gh", JSON.stringify(info)); } catch (e) {}
     })
     .catch(function () {});
