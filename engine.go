@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	"veloz/internal/compile"
-	"veloz/internal/runtime"
+	"github.com/victoragudo/go-veloz/internal/compile"
+	"github.com/victoragudo/go-veloz/internal/runtime"
 )
 
 type Engine struct {

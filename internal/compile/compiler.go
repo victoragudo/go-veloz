@@ -1,6 +1,6 @@
 package compile
 
-import "veloz/internal/runtime"
+import "github.com/victoragudo/go-veloz/internal/runtime"
 
 type Resolver interface {
 	ResolveCallable(name string, filter bool) (runtime.Callable, bool)

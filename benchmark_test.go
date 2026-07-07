@@ -6,7 +6,7 @@ import (
 	"testing"
 	texttemplate "text/template"
 
-	"veloz"
+	"github.com/victoragudo/go-veloz"
 )
 
 type benchUser struct {

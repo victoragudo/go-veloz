@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"veloz/internal/runtime"
+	"github.com/victoragudo/go-veloz/internal/runtime"
 )
 
 type fakeResolver struct{}

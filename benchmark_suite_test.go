@@ -11,7 +11,7 @@ import (
 	"testing"
 	texttemplate "text/template"
 
-	"veloz"
+	"github.com/victoragudo/go-veloz"
 )
 
 const goTemplatesDir = "testdata/gotemplates"

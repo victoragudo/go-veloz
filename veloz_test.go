@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"veloz"
+	"github.com/victoragudo/go-veloz"
 )
 
 type product struct {

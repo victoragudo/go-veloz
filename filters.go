@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode"
 
-	"veloz/internal/runtime"
+	"github.com/victoragudo/go-veloz/internal/runtime"
 )
 
 func registerFilters(e *Engine) {

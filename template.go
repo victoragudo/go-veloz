@@ -3,7 +3,7 @@ package veloz
 import (
 	"io"
 
-	"veloz/internal/runtime"
+	"github.com/victoragudo/go-veloz/internal/runtime"
 )
 
 type Template struct {

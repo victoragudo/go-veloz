@@ -12,7 +12,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"veloz"
+	"github.com/victoragudo/go-veloz"
 )
 
 type featUser struct {

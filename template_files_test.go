@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"veloz"
+	"github.com/victoragudo/go-veloz"
 )
 
 var updateGolden = flag.Bool("update", false, "rewrite golden files with the current output")

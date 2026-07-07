@@ -6,7 +6,7 @@ import (
 	"testing"
 	texttemplate "text/template"
 
-	"veloz"
+	"github.com/victoragudo/go-veloz"
 )
 
 var scaleSizes = []int{1, 100, 1000, 10000}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"veloz/internal/runtime"
+	"github.com/victoragudo/go-veloz/internal/runtime"
 )
 
 type parser struct {

@@ -1,6 +1,6 @@
 package compile
 
-import "veloz/internal/runtime"
+import "github.com/victoragudo/go-veloz/internal/runtime"
 
 type Node interface{ node() }
 

@@ -1,6 +1,6 @@
 package veloz
 
-import "veloz/internal/runtime"
+import "github.com/victoragudo/go-veloz/internal/runtime"
 
 type Value = runtime.Value
 
