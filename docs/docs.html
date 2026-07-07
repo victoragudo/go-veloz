@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Veloz Docs · Templates, filters, inheritance</title>
+<meta name="description" content="Complete reference for the Veloz template engine: syntax, expressions, filters, functions, loops, inheritance and the Go API.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2314110e'/%3E%3Cpath d='M6 7h6l4 12 4-12h6l-8 20h-4z' fill='%23ff4630'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,400..900;1,62..125,400..900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0eee9;
+  --bg-raise: #faf9f6;
+  --ink: #1c1814;
+  --muted: #6d655b;
+  --line: #d9d4ca;
+  --accent: #e03a24;
+  --accent-2: #b87400;
+  --panel: #16120e;
+  --panel-ink: #f3ede4;
+  --panel-muted: #97897a;
+  --panel-line: #2c261f;
+  --redline: linear-gradient(90deg, #ffae2e 0%, #ff6a2e 45%, #ff4630 100%);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14110e; --bg-raise: #1c1814; --ink: #f3ede4; --muted: #9c948a;
+    --line: #2c261f; --accent: #ff4630; --accent-2: #ffae2e;
+    --panel: #0f0d0a; --panel-ink: #f3ede4; --panel-muted: #8d8172; --panel-line: #2c261f;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f0eee9; --bg-raise: #faf9f6; --ink: #1c1814; --muted: #6d655b;
+  --line: #d9d4ca; --accent: #e03a24; --accent-2: #b87400;
+  --panel: #16120e; --panel-ink: #f3ede4; --panel-muted: #97897a; --panel-line: #2c261f;
+}
+:root[data-theme="dark"] {
+  --bg: #14110e; --bg-raise: #1c1814; --ink: #f3ede4; --muted: #9c948a;
+  --line: #2c261f; --accent: #ff4630; --accent-2: #ffae2e;
+  --panel: #0f0d0a; --panel-ink: #f3ede4; --panel-muted: #8d8172; --panel-line: #2c261f;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: 16px; line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+code, pre, .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+a { color: inherit; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+.redline { height: 3px; background: var(--redline); }
+
+nav.top { border-bottom: 1px solid var(--line); }
+.nav-in {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px; max-width: 1240px; margin: 0 auto;
+}
+.wordmark { font-weight: 900; font-style: italic; font-stretch: 115%; font-size: 22px; text-decoration: none; }
+.wordmark span { color: var(--accent); }
+.nav-links { display: flex; gap: 22px; align-items: center; }
+.nav-links a { font-family: "JetBrains Mono", monospace; font-size: 13px; text-decoration: none; color: var(--muted); }
+.nav-links a:hover { color: var(--ink); }
+#theme-btn {
+  background: none; border: 1px solid var(--line); color: var(--muted);
+  font-family: "JetBrains Mono", monospace; font-size: 12px;
+  padding: 5px 10px; cursor: pointer; border-radius: 3px;
+}
+#theme-btn:hover { color: var(--ink); border-color: var(--muted); }
+
+.layout {
+  display: grid; grid-template-columns: 230px minmax(0, 1fr);
+  gap: 48px; max-width: 1240px; margin: 0 auto; padding: 40px 24px 90px;
+}
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+aside { position: sticky; top: 24px; align-self: start; }
+@media (max-width: 900px) { aside { position: static; border-bottom: 1px solid var(--line); padding-bottom: 20px; } }
+aside .group { margin-bottom: 20px; }
+aside .group > span {
+  display: block; font-family: "JetBrains Mono", monospace; font-size: 10px;
+  font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 6px;
+}
+aside a {
+  display: block; font-size: 14px; text-decoration: none; color: var(--muted);
+  padding: 3px 0 3px 10px; border-left: 2px solid var(--line);
+}
+aside a:hover { color: var(--ink); border-left-color: var(--accent); }
+
+main h1 {
+  font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 900; font-style: italic;
+  font-stretch: 118%; text-transform: uppercase; letter-spacing: -0.01em;
+  line-height: 1; margin-bottom: 10px; text-wrap: balance;
+}
+main h1 span { color: var(--accent); }
+.lede { color: var(--muted); max-width: 62ch; margin-bottom: 12px; }
+
+section.doc { padding: 44px 0 8px; border-top: 1px solid var(--line); margin-top: 44px; }
+section.doc:first-of-type { border-top: 0; margin-top: 26px; padding-top: 0; }
+section.doc h2 {
+  font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 900; font-stretch: 115%;
+  font-style: italic; text-transform: uppercase; margin-bottom: 8px;
+}
+section.doc > p { max-width: 68ch; margin-bottom: 14px; }
+section.doc h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+p code, li code, td code {
+  background: var(--bg-raise); border: 1px solid var(--line);
+  padding: 1px 5px; border-radius: 3px; font-size: 0.85em;
+}
+.note { font-size: 14px; color: var(--muted); max-width: 68ch; margin: 10px 0; }
+.note b { color: var(--accent-2); }
+
+.panel {
+  background: var(--panel); color: var(--panel-ink);
+  border: 1px solid var(--panel-line); margin: 14px 0;
+}
+.panel-tab {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.18em; color: var(--panel-muted);
+  padding: 8px 14px; border-bottom: 1px solid var(--panel-line);
+}
+.panel pre { padding: 14px; font-size: 13px; line-height: 1.7; overflow-x: auto; }
+.out {
+  border-top: 1px dashed var(--panel-line); padding: 10px 14px;
+  font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: #a8d878;
+  white-space: pre-wrap; overflow-x: auto;
+}
+.out::before { content: "output  "; color: var(--panel-muted); letter-spacing: 0.14em; text-transform: uppercase; font-size: 10px; }
+.tok-tag { color: #ff8a5c; }
+.tok-var { color: #ffd479; }
+.tok-str { color: #a8d878; }
+.tok-op  { color: #7fb8e8; }
+.tok-dim { color: var(--panel-muted); }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 14px 0; }
+.table-scroll { overflow-x: auto; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.16em; color: var(--muted);
+}
+td:first-child code { color: var(--accent); background: none; border: 0; padding: 0; font-weight: 700; }
+td { font-variant-numeric: tabular-nums; }
+
+.filters { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; margin-top: 16px; }
+@media (max-width: 760px) { .filters { grid-template-columns: 1fr; } }
+.filter { border: 1px solid var(--line); background: var(--bg-raise); }
+.filter header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 12px 14px 0; }
+.filter header code { font-size: 14px; font-weight: 700; color: var(--accent); background: none; border: 0; padding: 0; }
+.filter header small { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.filter p { font-size: 13.5px; color: var(--muted); padding: 4px 14px 10px; }
+.filter .ex {
+  border-top: 1px solid var(--line); padding: 9px 14px;
+  font-family: "JetBrains Mono", monospace; font-size: 12px;
+  display: flex; flex-direction: column; gap: 2px; overflow-x: auto;
+}
+.filter .ex b { font-weight: 400; color: var(--accent-2); white-space: nowrap; }
+.filter .ex i { font-style: normal; color: var(--muted); white-space: nowrap; }
+.filter .ex i::before { content: "→ "; color: var(--accent); }
+
+footer { border-top: 1px solid var(--line); padding: 34px 24px 50px; }
+.foot { max-width: 1240px; margin: 0 auto; display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.foot p { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); }
+.foot a { color: var(--muted); }
+.foot a:hover { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="redline"></div>
+<nav class="top">
+  <div class="nav-in">
+    <a class="wordmark" href="index.html">VELOZ<span>.</span></a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="index.html#benchmarks">Benchmarks</a>
+      <a href="https://github.com/victoragudo/go-veloz">GitHub</a>
+      <button id="theme-btn" aria-label="Toggle color theme">theme</button>
+    </div>
+  </div>
+</nav>
+
+<div class="layout">
+<aside>
+  <div class="group"><span>Start</span>
+    <a href="#install">Install and render</a>
+    <a href="#delimiters">Delimiters</a>
+  </div>
+  <div class="group"><span>Language</span>
+    <a href="#expressions">Expressions</a>
+    <a href="#variables">Variables and data</a>
+    <a href="#conditionals">If and set</a>
+    <a href="#loops">Loops</a>
+    <a href="#inheritance">Inheritance</a>
+    <a href="#escaping">Autoescape</a>
+    <a href="#whitespace">Whitespace</a>
+  </div>
+  <div class="group"><span>Reference</span>
+    <a href="#filters">Filters</a>
+    <a href="#functions">Functions</a>
+    <a href="#custom">Custom filters</a>
+    <a href="#api">Go API</a>
+  </div>
+</aside>
+
+<main>
+<h1>Documentation<span>.</span></h1>
+<p class="lede">Everything the engine understands, with a runnable example for each feature. Every output shown here is produced by the test suite.</p>
+
+<section class="doc" id="install">
+  <h2>Install and render</h2>
+  <p>Create one engine per application, compile templates once, render as many times as you want. The engine is safe to share across goroutines.</p>
+  <div class="panel">
+    <div class="panel-tab">main.go</div>
+    <pre><code><span class="tok-op">go get</span> github.com/victoragudo/go-veloz
+
+engine := veloz.<span class="tok-var">New</span>()
+tmpl, err := engine.<span class="tok-var">Compile</span>(<span class="tok-str">"hello"</span>, <span class="tok-str">"Hola {{ name | capitalize }}!"</span>)
+out, err := tmpl.<span class="tok-var">Render</span>(<span class="tok-tag">map</span>[<span class="tok-tag">string</span>]<span class="tok-tag">any</span>{<span class="tok-str">"name"</span>: <span class="tok-str">"mireia"</span>})</code></pre>
+    <div class="out">Hola Mireia!</div>
+  </div>
+  <p class="note"><b>Note</b> compile errors are real errors: an unknown filter or a broken tag fails at <code>Compile</code> time, not in production at render time.</p>
+</section>
+
+<section class="doc" id="delimiters">
+  <h2>Delimiters</h2>
+  <div class="table-scroll"><table>
+    <tr><th>Delimiter</th><th>Purpose</th><th>Example</th></tr>
+    <tr><td><code>{{ ... }}</code></td><td>Print an expression</td><td><code>{{ user.name | upper }}</code></td></tr>
+    <tr><td><code>{% ... %}</code></td><td>Statements: if, for, set, block...</td><td><code>{% if admin %}...{% endif %}</code></td></tr>
+    <tr><td><code>{# ... #}</code></td><td>Comment, produces no output</td><td><code>{# reviewed 2026-07 #}</code></td></tr>
+  </table></div>
+</section>
+
+<section class="doc" id="expressions">
+  <h2>Expressions</h2>
+  <p>Expressions work anywhere: inside <code>{{ }}</code>, in conditions, in filter arguments.</p>
+
+  <h3>Literals</h3>
+  <p><code>42</code>, <code>3.5</code>, <code>1.2e3</code>, <code>"text"</code>, <code>'text'</code>, <code>true</code>, <code>false</code>, <code>null</code> (alias <code>none</code>), arrays <code>[1, 2, 3]</code> and maps <code>{city: "Madrid", "zip": "28001"}</code>. Bare map keys become strings.</p>
+
+  <h3>Arithmetic and strings</h3>
+  <div class="panel">
+    <pre><code><span class="tok-tag">{{</span> 2 + 3 * 4 <span class="tok-tag">}}</span>  <span class="tok-tag">{{</span> 10 / 4 <span class="tok-tag">}}</span>  <span class="tok-tag">{{</span> 10.5 % 3 <span class="tok-tag">}}</span>  <span class="tok-tag">{{</span> 2 ** 8 <span class="tok-tag">}}</span>  <span class="tok-tag">{{</span> <span class="tok-str">"go"</span> <span class="tok-op">~</span> <span class="tok-str">"-veloz"</span> <span class="tok-tag">}}</span></code></pre>
+    <div class="out">14  2.5  1.5  256  go-veloz</div>
+  </div>
+  <p class="note"><b>Semantics</b> integer math stays integer, division always returns a float, <code>%</code> works on floats too, <code>~</code> concatenates as strings, and <code>==</code> compares numbers exactly (<code>true == 1</code> is true, large int64 values never lose precision).</p>
+
+  <h3>Comparison, logic, membership</h3>
+  <div class="panel">
+    <pre><code><span class="tok-tag">{{</span> age >= 18 <span class="tok-op">and</span> <span class="tok-op">not</span> banned <span class="tok-tag">}}</span>
+<span class="tok-tag">{{</span> 2 <span class="tok-op">in</span> [1, 2, 3] <span class="tok-tag">}}</span>  <span class="tok-tag">{{</span> <span class="tok-str">"a"</span> <span class="tok-op">in</span> <span class="tok-str">"cat"</span> <span class="tok-tag">}}</span>  <span class="tok-tag">{{</span> 9 <span class="tok-op">not in</span> [1, 2, 3] <span class="tok-tag">}}</span></code></pre>
+    <div class="out">true
+true  true  true</div>
+  </div>
+  <p class="note"><b>Short-circuit</b> <code>and</code> / <code>or</code> return the deciding operand, so <code>{{ user.name or "guest" }}</code> prints the fallback when the name is empty. Truthiness: <code>null</code>, <code>0</code>, <code>""</code> and empty collections are false.</p>
+
+  <h3>Ternary and elvis</h3>
+  <div class="panel">
+    <pre><code><span class="tok-tag">{{</span> age >= 18 <span class="tok-op">?</span> <span class="tok-str">"adult"</span> <span class="tok-op">:</span> <span class="tok-str">"minor"</span> <span class="tok-tag">}}</span>   <span class="tok-tag">{{</span> nickname <span class="tok-op">?:</span> <span class="tok-str">"guest"</span> <span class="tok-tag">}}</span></code></pre>
+    <div class="out">adult   guest</div>
+  </div>
+
+  <h3>Indexing</h3>
+  <div class="panel">
+    <pre><code><span class="tok-tag">{{</span> items[0] <span class="tok-tag">}}</span>  <span class="tok-tag">{{</span> items[-1] <span class="tok-tag">}}</span>  <span class="tok-tag">{{</span> prices[<span class="tok-str">"basic"</span>] <span class="tok-tag">}}</span>  <span class="tok-tag">{{</span> matrix[1][0] <span class="tok-tag">}}</span></code></pre>
+  </div>
+  <p class="note"><b>Negative indexes</b> count from the end of the list.</p>
+
+  <h3>Operator precedence</h3>
+  <p>From lowest to highest: ternary and <code>?:</code> · <code>or</code> · <code>and</code> · <code>not</code> · comparisons and <code>in</code> · <code>~</code> · <code>+ -</code> · <code>* / %</code> · unary minus · <code>**</code> · attribute, index, call and <code>|</code> filter. Note that a filter binds tighter than unary minus: write <code>{{ (-4) | abs }}</code>, not <code>{{ -4 | abs }}</code>.</p>
+</section>
+
+<section class="doc" id="variables">
+  <h2>Variables and data</h2>
+  <p>Pass any Go value to <code>Render</code>. Maps, structs, slices and pointers all resolve naturally.</p>
+  <div class="panel">
+    <div class="panel-tab">template + data</div>
+    <pre><code><span class="tok-tag">{{</span> <span class="tok-var">user.email</span> <span class="tok-tag">}}</span>            <span class="tok-dim">map key</span>
+<span class="tok-tag">{{</span> <span class="tok-var">product.Name</span> <span class="tok-tag">}}</span>          <span class="tok-dim">struct field</span>
+<span class="tok-tag">{{</span> <span class="tok-var">product.Label()</span> <span class="tok-tag">}}</span>       <span class="tok-dim">method, no args</span>
+<span class="tok-tag">{{</span> <span class="tok-var">product.Discounted(25)</span> <span class="tok-tag">}}</span> <span class="tok-dim">method with args</span>
+<span class="tok-tag">{{</span> <span class="tok-var">order.lines[0].qty</span> <span class="tok-tag">}}</span>    <span class="tok-dim">nested access</span></code></pre>
+  </div>
+  <p class="note"><b>Lenient by design</b> a missing key or field renders as empty instead of failing. Methods can return <code>(T)</code> or <code>(T, error)</code>. Struct access is cached by reflection type, so repeated renders do not pay reflection again.</p>
+  <p>For full control, implement the <code>Attributer</code> interface and skip reflection entirely:</p>
+  <div class="panel">
+    <pre><code><span class="tok-tag">func</span> (u User) <span class="tok-var">VelozAttr</span>(name <span class="tok-tag">string</span>) (veloz.Value, <span class="tok-tag">bool</span>) {
+    <span class="tok-tag">switch</span> name {
+    <span class="tok-tag">case</span> <span class="tok-str">"name"</span>: <span class="tok-tag">return</span> veloz.<span class="tok-var">Str</span>(u.Name), <span class="tok-tag">true</span>
+    }
+    <span class="tok-tag">return</span> veloz.<span class="tok-var">Nil</span>(), <span class="tok-tag">false</span>
+}</code></pre>
+  </div>
+</section>
+
+<section class="doc" id="conditionals">
+  <h2>If and set</h2>
+  <div class="panel">
+    <pre><code><span class="tok-tag">{% if</span> temperature > 30 <span class="tok-tag">%}</span>hot<span class="tok-tag">{% elseif</span> temperature > 15 <span class="tok-tag">%}</span>warm<span class="tok-tag">{% else %}</span>cold<span class="tok-tag">{% endif %}</span></code></pre>
+    <div class="out">warm</div>
+  </div>
+  <p><code>set</code> creates or reassigns a local variable. Reassigning inside a loop is the idiomatic way to accumulate:</p>
+  <div class="panel">
+    <pre><code><span class="tok-tag">{% set</span> total = 0 <span class="tok-tag">%}</span>
+<span class="tok-tag">{% for</span> line <span class="tok-op">in</span> invoice.lines <span class="tok-tag">%}{% set</span> total = total + line.total() <span class="tok-tag">%}{% endfor %}</span>
+Total: <span class="tok-tag">{{</span> total <span class="tok-tag">}}</span></code></pre>
+    <div class="out">Total: 1415</div>
+  </div>
+</section>
+
+<section class="doc" id="loops">
+  <h2>Loops</h2>
+  <div class="panel">
+    <pre><code><span class="tok-tag">{% for</span> name <span class="tok-op">in</span> names <span class="tok-tag">%}</span><span class="tok-tag">{{</span> name <span class="tok-tag">}}</span>; <span class="tok-tag">{% endfor %}</span>
+<span class="tok-tag">{% for</span> item, units <span class="tok-op">in</span> stock <span class="tok-tag">%}</span><span class="tok-tag">{{</span> item <span class="tok-tag">}}</span>=<span class="tok-tag">{{</span> units <span class="tok-tag">}}</span> <span class="tok-tag">{% endfor %}</span></code></pre>
+    <div class="out">Mireia; Aleix; Nuria;
+keyboard=12 mouse=30</div>
+  </div>
+  <p class="note"><b>Maps iterate in sorted key order</b>, so output is deterministic. On a slice, the two-variable form gives you the index: <code>{% for i, name in names %}</code>.</p>
+
+  <h3>The loop context</h3>
+  <p>Inside every <code>for</code>, a <code>loop</code> variable describes the current iteration:</p>
+  <div class="table-scroll"><table>
+    <tr><th>Attribute</th><th>Meaning</th><th>For 3 items</th></tr>
+    <tr><td><code>loop.index</code></td><td>1-based position</td><td>1, 2, 3</td></tr>
+    <tr><td><code>loop.index0</code></td><td>0-based position</td><td>0, 1, 2</td></tr>
+    <tr><td><code>loop.revindex</code></td><td>1-based position from the end</td><td>3, 2, 1</td></tr>
+    <tr><td><code>loop.revindex0</code></td><td>0-based position from the end</td><td>2, 1, 0</td></tr>
+    <tr><td><code>loop.first</code></td><td>true on the first iteration</td><td>true, false, false</td></tr>
+    <tr><td><code>loop.last</code></td><td>true on the last iteration</td><td>false, false, true</td></tr>
+    <tr><td><code>loop.length</code></td><td>total number of items</td><td>3, 3, 3</td></tr>
+  </table></div>
+  <div class="panel">
+    <pre><code><span class="tok-tag">{% for</span> name <span class="tok-op">in</span> names <span class="tok-tag">%}</span><span class="tok-tag">{{</span> <span class="tok-var">loop.index</span> <span class="tok-tag">}}</span>:<span class="tok-tag">{{</span> name <span class="tok-tag">}}</span><span class="tok-tag">{% if not</span> <span class="tok-var">loop.last</span> <span class="tok-tag">%}</span>, <span class="tok-tag">{% endif %}{% endfor %}</span></code></pre>
+    <div class="out">1:Mireia, 2:Aleix, 3:Nuria</div>
+  </div>
+
+  <h3>Empty collections: for / else</h3>
+  <div class="panel">
+    <pre><code><span class="tok-tag">{% for</span> x <span class="tok-op">in</span> results <span class="tok-tag">%}</span><span class="tok-tag">{{</span> x <span class="tok-tag">}}</span><span class="tok-tag">{% else %}</span>No results found<span class="tok-tag">{% endfor %}</span></code></pre>
+    <div class="out">No results found</div>
+  </div>
+</section>
+
+<section class="doc" id="inheritance">
+  <h2>Inheritance and includes</h2>
+  <p>A child template <code>extends</code> a layout and overrides its named blocks. Blocks keep their default content when not overridden. Both templates must be compiled in the same engine.</p>
+  <div class="panel">
+    <div class="panel-tab">layout</div>
+    <pre><code>&lt;h1&gt;<span class="tok-tag">{% block title %}</span>Default<span class="tok-tag">{% endblock %}</span>&lt;/h1&gt;
+&lt;div&gt;<span class="tok-tag">{% block body %}{% endblock %}</span>&lt;/div&gt;
+&lt;footer&gt;<span class="tok-tag">{% block footer %}{% include</span> <span class="tok-str">"footer"</span> <span class="tok-tag">%}{% endblock %}</span>&lt;/footer&gt;</code></pre>
+  </div>
+  <div class="panel">
+    <div class="panel-tab">page</div>
+    <pre><code><span class="tok-tag">{% extends</span> <span class="tok-str">"layout"</span> <span class="tok-tag">%}</span>
+<span class="tok-tag">{% block title %}</span>Profile of <span class="tok-tag">{{</span> name <span class="tok-tag">}}</span><span class="tok-tag">{% endblock %}</span>
+<span class="tok-tag">{% block body %}</span>Content here<span class="tok-tag">{% endblock %}</span></code></pre>
+    <div class="out">&lt;h1&gt;Profile of Aleix&lt;/h1&gt;&lt;div&gt;Content here&lt;/div&gt;&lt;footer&gt;...&lt;/footer&gt;</div>
+  </div>
+  <p class="note"><b>Rules</b> chains of any depth work (page extends section extends base), the first definition of a block wins down the chain, inheritance cycles are detected and reported, and <code>include</code> renders another compiled template with the same data.</p>
+</section>
+
+<section class="doc" id="escaping">
+  <h2>Autoescape</h2>
+  <p>HTML escaping is on by default. Anything printed with <code>{{ }}</code> is escaped unless it is marked safe.</p>
+  <div class="panel">
+    <pre><code><span class="tok-tag">{{</span> html <span class="tok-tag">}}</span>
+<span class="tok-tag">{{</span> html <span class="tok-op">|</span> <span class="tok-var">raw</span> <span class="tok-tag">}}</span></code></pre>
+    <div class="out">&amp;lt;b&amp;gt;bold&amp;lt;/b&amp;gt;
+&lt;b&gt;bold&lt;/b&gt;</div>
+  </div>
+  <p class="note"><b>Three escape hatches</b> the <code>raw</code> filter, returning a <code>veloz.SafeString</code> from Go, or disabling it per engine with <code>veloz.New(veloz.WithAutoescape(false))</code> when you generate non-HTML output like config files or code.</p>
+  <p class="note"><b>Scope</b> escaping covers HTML body context (<code>&amp; &lt; &gt; " '</code>). It is not context-aware like <code>html/template</code>: do not interpolate untrusted data inside <code>href</code>, <code>onclick</code> or <code>&lt;script&gt;</code>.</p>
+</section>
+
+<section class="doc" id="whitespace">
+  <h2>Whitespace control</h2>
+  <p>Add a dash to any delimiter to eat the whitespace on that side: <code>{{-</code>, <code>-}}</code>, <code>{%-</code>, <code>-%}</code>.</p>
+  <div class="panel">
+    <pre><code>a
+<span class="tok-tag">{%- if</span> true <span class="tok-tag">-%}</span>
+  b
+<span class="tok-tag">{%- endif -%}</span>
+c</code></pre>
+    <div class="out">abc</div>
+  </div>
+</section>
+
+<section class="doc" id="filters">
+  <h2>Filters</h2>
+  <p>Apply with <code>|</code> and chain freely: <code>{{ names | reverse | join(", ") }}</code>. Every filter can also be called as a function: <code>upper("hola")</code> equals <code>"hola" | upper</code>.</p>
+  <div class="filters">
+    <div class="filter"><header><code>upper</code><small>strings</small></header><p>Converts to upper case.</p><div class="ex"><b>{{ "hello" | upper }}</b><i>HELLO</i></div></div>
+    <div class="filter"><header><code>lower</code><small>strings</small></header><p>Converts to lower case.</p><div class="ex"><b>{{ "HELLO" | lower }}</b><i>hello</i></div></div>
+    <div class="filter"><header><code>capitalize</code><small>strings</small></header><p>Upper case first letter, lower case for the rest.</p><div class="ex"><b>{{ "hello world" | capitalize }}</b><i>Hello world</i></div></div>
+    <div class="filter"><header><code>title</code><small>strings</small></header><p>Upper case at the start of every word.</p><div class="ex"><b>{{ "point of sale" | title }}</b><i>Point Of Sale</i></div></div>
+    <div class="filter"><header><code>trim</code><small>strings</small></header><p>Removes surrounding whitespace, or the given characters.</p><div class="ex"><b>{{ "xxwordxx" | trim("x") }}</b><i>word</i></div></div>
+    <div class="filter"><header><code>replace</code><small>strings</small></header><p>Replaces every occurrence. Also accepts a map of pairs.</p><div class="ex"><b>{{ "cat" | replace("c", "b") }}</b><i>bat</i></div></div>
+    <div class="filter"><header><code>split</code><small>strings</small></header><p>Splits a string into a list by a separator.</p><div class="ex"><b>{{ "a;b;c" | split(";") | join("+") }}</b><i>a+b+c</i></div></div>
+    <div class="filter"><header><code>length</code><small>any · alias count</small></header><p>Items in a list or map, runes in a string.</p><div class="ex"><b>{{ "azores" | length }}</b><i>6</i></div></div>
+    <div class="filter"><header><code>default</code><small>any</small></header><p>Fallback value when the input is empty or false.</p><div class="ex"><b>{{ "" | default("guest") }}</b><i>guest</i></div></div>
+    <div class="filter"><header><code>join</code><small>lists</small></header><p>Concatenates list items with a separator.</p><div class="ex"><b>{{ names | join(", ") }}</b><i>Mireia, Aleix, Nuria</i></div></div>
+    <div class="filter"><header><code>reverse</code><small>lists · strings</small></header><p>Reverses a list or the runes of a string.</p><div class="ex"><b>{{ "veloz" | reverse }}</b><i>zolev</i></div></div>
+    <div class="filter"><header><code>first</code><small>lists · strings</small></header><p>First element or first character.</p><div class="ex"><b>{{ names | first }}</b><i>Mireia</i></div></div>
+    <div class="filter"><header><code>last</code><small>lists · strings</small></header><p>Last element or last character.</p><div class="ex"><b>{{ names | last }}</b><i>Nuria</i></div></div>
+    <div class="filter"><header><code>keys</code><small>maps · lists</small></header><p>Sorted keys of a map, or the indexes of a list.</p><div class="ex"><b>{{ stock | keys | join(",") }}</b><i>keyboard,mouse</i></div></div>
+    <div class="filter"><header><code>abs</code><small>numbers</small></header><p>Absolute value, keeps ints as ints.</p><div class="ex"><b>{{ (-7.5) | abs }}</b><i>7.5</i></div></div>
+    <div class="filter"><header><code>round</code><small>numbers</small></header><p>Rounds to N decimals, default 0.</p><div class="ex"><b>{{ 3.14159 | round(2) }}</b><i>3.14</i></div></div>
+    <div class="filter"><header><code>escape</code><small>html · alias e</small></header><p>Escapes HTML and marks the result safe.</p><div class="ex"><b>{{ "a &amp; b" | escape }}</b><i>a &amp;amp; b</i></div></div>
+    <div class="filter"><header><code>raw</code><small>html</small></header><p>Marks a value as safe, skipping autoescape.</p><div class="ex"><b>{{ html | raw }}</b><i>&lt;b&gt;bold&lt;/b&gt;</i></div></div>
+    <div class="filter"><header><code>nl2br</code><small>html</small></header><p>Escapes, then turns new lines into <code>&lt;br /&gt;</code>.</p><div class="ex"><b>{{ notes | nl2br }}</b><i>first line&lt;br /&gt;second line</i></div></div>
+  </div>
+</section>
+
+<section class="doc" id="functions">
+  <h2>Functions</h2>
+  <p>Called with parentheses. Any function also works as a filter: <code>{{ 5 | max(9) }}</code> is <code>max(5, 9)</code>.</p>
+  <div class="table-scroll"><table>
+    <tr><th>Function</th><th>Description</th><th>Example</th><th>Output</th></tr>
+    <tr><td><code>range(start, end, step?)</code></td><td>Inclusive numeric sequence, step defaults to 1 and can be negative</td><td><code>range(10, 0, -5) | join(",")</code></td><td>10,5,0</td></tr>
+    <tr><td><code>max(...)</code></td><td>Largest of the arguments or of a single list</td><td><code>max(3, 8, 2)</code></td><td>8</td></tr>
+    <tr><td><code>min(...)</code></td><td>Smallest of the arguments or of a single list</td><td><code>min([4, 1, 7])</code></td><td>1</td></tr>
+    <tr><td><code>length(v)</code></td><td>Same as the length filter</td><td><code>length("madrid")</code></td><td>6</td></tr>
+  </table></div>
+</section>
+
+<section class="doc" id="custom">
+  <h2>Custom filters and functions</h2>
+  <p>A filter and a function share the same shape: a <code>Callable</code> that receives evaluated arguments and returns a value. For filters, the piped value arrives as <code>args[0]</code>.</p>
+  <div class="panel">
+    <div class="panel-tab">main.go</div>
+    <pre><code>engine.<span class="tok-var">RegisterFilter</span>(<span class="tok-str">"money"</span>, <span class="tok-tag">func</span>(args []veloz.Value) (veloz.Value, <span class="tok-tag">error</span>) {
+    f, _ := args[<span class="tok-str">0</span>].<span class="tok-var">Interface</span>().(<span class="tok-tag">float64</span>)
+    <span class="tok-tag">return</span> veloz.<span class="tok-var">Str</span>(fmt.<span class="tok-var">Sprintf</span>(<span class="tok-str">"%.2f EUR"</span>, f)), <span class="tok-tag">nil</span>
+})
+
+engine.<span class="tok-var">RegisterFunction</span>(<span class="tok-str">"today"</span>, <span class="tok-tag">func</span>(args []veloz.Value) (veloz.Value, <span class="tok-tag">error</span>) {
+    <span class="tok-tag">return</span> veloz.<span class="tok-var">Str</span>(time.<span class="tok-var">Now</span>().<span class="tok-var">Format</span>(<span class="tok-str">"2006-01-02"</span>)), <span class="tok-tag">nil</span>
+})</code></pre>
+    <div class="out">{{ price | money }}  → 49.90 EUR
+{{ today() }}        → 2026-07-07</div>
+  </div>
+  <p class="note"><b>Value helpers</b> build return values with <code>veloz.Str</code>, <code>veloz.Int</code>, <code>veloz.Float</code>, <code>veloz.Bool</code>, <code>veloz.Nil</code>, <code>veloz.Object</code> or <code>veloz.FromAny</code>. Read arguments with <code>.Interface()</code>, <code>.String()</code>, <code>.IsTruthy()</code>. Return a <code>veloz.SafeString</code> wrapped in <code>Object</code> to bypass autoescape.</p>
+</section>
+
+<section class="doc" id="api">
+  <h2>Go API</h2>
+  <div class="table-scroll"><table>
+    <tr><th>Call</th><th>What it does</th></tr>
+    <tr><td><code>veloz.New(opts...)</code></td><td>Creates an engine with the built-in filters and functions registered</td></tr>
+    <tr><td><code>veloz.WithAutoescape(false)</code></td><td>Option: disable HTML escaping for this engine</td></tr>
+    <tr><td><code>engine.Compile(name, src)</code></td><td>Parses and compiles to bytecode, registers the template under its name</td></tr>
+    <tr><td><code>engine.MustCompile(name, src)</code></td><td>Same, panics on error. For templates known at build time</td></tr>
+    <tr><td><code>engine.Get(name)</code></td><td>Returns an already compiled template</td></tr>
+    <tr><td><code>tmpl.Render(data)</code></td><td>Renders to a string</td></tr>
+    <tr><td><code>tmpl.RenderTo(w, data)</code></td><td>Renders straight into an <code>io.Writer</code>, no intermediate copy</td></tr>
+    <tr><td><code>tmpl.RenderBytes(data)</code></td><td>Renders to a fresh byte slice</td></tr>
+    <tr><td><code>engine.RegisterFilter(name, fn)</code></td><td>Adds a filter, available to every template of the engine</td></tr>
+    <tr><td><code>engine.RegisterFunction(name, fn)</code></td><td>Adds a function, same namespace as filters</td></tr>
+  </table></div>
+  <p class="note"><b>Concurrency</b> one engine serves all goroutines. Interpreters, stacks and locals live in an internal pool, so steady-state rendering does not allocate fixed overhead.</p>
+</section>
+</main>
+</div>
+
+<footer>
+  <div class="foot">
+    <p>MIT License · Built in Go, for Go</p>
+    <p><a href="https://github.com/victoragudo/go-veloz">github.com/victoragudo/go-veloz</a></p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var btn = document.getElementById("theme-btn");
+  var root = document.documentElement;
+  var stored = null;
+  try { stored = localStorage.getItem("veloz-theme"); } catch (e) {}
+  if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
+  btn.addEventListener("click", function () {
+    var dark = root.getAttribute("data-theme") === "dark" ||
+      (!root.getAttribute("data-theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    var next = dark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("veloz-theme", next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

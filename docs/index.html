@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Veloz · A fast template engine for Go</title>
+<meta name="description" content="Veloz compiles Twig-style templates to bytecode and runs them on a stack VM. Up to 7x faster than text/template.">
+<meta property="og:title" content="Veloz · A fast template engine for Go">
+<meta property="og:description" content="Twig-style templates, compiled to bytecode, executed on a stack VM. Up to 7x faster than text/template.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2314110e'/%3E%3Cpath d='M6 7h6l4 12 4-12h6l-8 20h-4z' fill='%23ff4630'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,400..900;1,62..125,400..900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0eee9;
+  --bg-raise: #faf9f6;
+  --ink: #1c1814;
+  --muted: #6d655b;
+  --line: #d9d4ca;
+  --accent: #e03a24;
+  --accent-2: #b87400;
+  --panel: #16120e;
+  --panel-ink: #f3ede4;
+  --panel-muted: #97897a;
+  --panel-line: #2c261f;
+  --redline: linear-gradient(90deg, #ffae2e 0%, #ff6a2e 45%, #ff4630 100%);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14110e;
+    --bg-raise: #1c1814;
+    --ink: #f3ede4;
+    --muted: #9c948a;
+    --line: #2c261f;
+    --accent: #ff4630;
+    --accent-2: #ffae2e;
+    --panel: #0f0d0a;
+    --panel-ink: #f3ede4;
+    --panel-muted: #8d8172;
+    --panel-line: #2c261f;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f0eee9;
+  --bg-raise: #faf9f6;
+  --ink: #1c1814;
+  --muted: #6d655b;
+  --line: #d9d4ca;
+  --accent: #e03a24;
+  --accent-2: #b87400;
+  --panel: #16120e;
+  --panel-ink: #f3ede4;
+  --panel-muted: #97897a;
+  --panel-line: #2c261f;
+}
+:root[data-theme="dark"] {
+  --bg: #14110e;
+  --bg-raise: #1c1814;
+  --ink: #f3ede4;
+  --muted: #9c948a;
+  --line: #2c261f;
+  --accent: #ff4630;
+  --accent-2: #ffae2e;
+  --panel: #0f0d0a;
+  --panel-ink: #f3ede4;
+  --panel-muted: #8d8172;
+  --panel-line: #2c261f;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+code, pre, .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+a { color: inherit; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+.wrap { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+.eyebrow {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+}
+.redline { height: 3px; background: var(--redline); }
+
+/* nav */
+nav { border-bottom: 1px solid var(--line); }
+.nav-in {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px; max-width: 1140px; margin: 0 auto;
+}
+.wordmark {
+  font-weight: 900; font-style: italic; font-stretch: 115%;
+  font-size: 22px; letter-spacing: 0.02em; text-decoration: none;
+}
+.wordmark span { color: var(--accent); }
+.ver {
+  font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700;
+  color: var(--accent-2); border: 1px solid var(--panel-line); border-radius: 999px;
+  padding: 2px 9px; letter-spacing: 0.06em; flex-shrink: 0;
+}
+.nav-links { display: flex; gap: 22px; align-items: center; }
+.nav-links a {
+  font-family: "JetBrains Mono", monospace; font-size: 13px;
+  text-decoration: none; color: var(--muted);
+}
+.nav-links a:hover { color: var(--ink); }
+#theme-btn {
+  background: none; border: 1px solid var(--line); color: var(--muted);
+  font-family: "JetBrains Mono", monospace; font-size: 12px;
+  padding: 5px 10px; cursor: pointer; border-radius: 3px;
+}
+#theme-btn:hover { color: var(--ink); border-color: var(--muted); }
+
+/* hero */
+header.hero { padding: 84px 0 64px; border-bottom: 1px solid var(--line); position: relative; overflow: hidden; }
+.hero h1 {
+  font-size: clamp(4.2rem, 13vw, 10.5rem);
+  font-weight: 900; font-style: italic; font-stretch: 120%;
+  line-height: 0.92; letter-spacing: -0.015em;
+  text-transform: uppercase; text-wrap: balance;
+  margin: 18px 0 8px;
+}
+.hero h1 .dot { color: var(--accent); font-style: normal; }
+.speedlines {
+  position: absolute; right: -40px; top: 90px; width: 340px; height: 120px;
+  background: repeating-linear-gradient(0deg, var(--line) 0 1px, transparent 1px 14px);
+  transform: skewX(-24deg); opacity: 0.55; pointer-events: none;
+}
+.thesis {
+  font-size: clamp(1.2rem, 2.4vw, 1.6rem); font-weight: 500;
+  max-width: 34ch; line-height: 1.35; text-wrap: balance;
+}
+.thesis em { font-style: italic; color: var(--accent); }
+.hero-grid { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,0.8fr); gap: 48px; align-items: end; }
+@media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; } .speedlines { display: none; } }
+
+.stat-strip {
+  display: flex; gap: 0; margin-top: 44px; border: 1px solid var(--line);
+  background: var(--bg-raise);
+}
+.stat { flex: 1; padding: 18px 22px; border-right: 1px solid var(--line); }
+.stat:last-child { border-right: 0; }
+.stat b {
+  display: block; font-size: clamp(1.7rem, 3.4vw, 2.4rem); font-weight: 900;
+  font-stretch: 115%; font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.stat b i { font-style: normal; color: var(--accent); }
+.stat small { font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+@media (max-width: 640px) { .stat-strip { flex-direction: column; } .stat { border-right: 0; border-bottom: 1px solid var(--line); } .stat:last-child { border-bottom: 0; } }
+
+.install {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--panel); color: var(--panel-ink);
+  border: 1px solid var(--panel-line); padding: 14px 18px; margin-top: 26px;
+}
+.install code { font-size: 14px; overflow-x: auto; white-space: nowrap; flex: 1; }
+.install code .cmd { color: var(--accent-2); }
+.copy-btn {
+  background: none; border: 1px solid var(--panel-line); color: var(--panel-muted);
+  font-family: "JetBrains Mono", monospace; font-size: 11px; padding: 6px 10px;
+  cursor: pointer; border-radius: 3px; flex-shrink: 0;
+}
+.copy-btn:hover { color: var(--panel-ink); border-color: var(--panel-muted); }
+.cta-row { display: flex; gap: 14px; margin-top: 22px; flex-wrap: wrap; }
+.btn {
+  display: inline-block; text-decoration: none; font-weight: 700;
+  font-family: "JetBrains Mono", monospace; font-size: 14px;
+  padding: 12px 22px; border-radius: 3px;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-ghost { border: 1px solid var(--line); color: var(--ink); }
+.btn-ghost:hover { border-color: var(--muted); }
+
+/* sections */
+section { padding: 72px 0; border-bottom: 1px solid var(--line); }
+.sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; margin-bottom: 36px; flex-wrap: wrap; }
+.sec-head h2 {
+  font-size: clamp(1.9rem, 4vw, 2.8rem); font-weight: 900; font-stretch: 115%;
+  font-style: italic; text-transform: uppercase; letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.sec-head p { color: var(--muted); max-width: 52ch; }
+
+/* pipeline */
+.pipeline { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; }
+@media (max-width: 900px) { .pipeline { grid-template-columns: 1fr; } }
+.panel {
+  background: var(--panel); color: var(--panel-ink);
+  border: 1px solid var(--panel-line); display: flex; flex-direction: column;
+}
+.panel-tab {
+  font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.18em; color: var(--panel-muted);
+  padding: 10px 16px; border-bottom: 1px solid var(--panel-line);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.panel-tab b { color: var(--accent-2); font-weight: 700; }
+.panel pre { padding: 16px; font-size: 12.5px; line-height: 1.75; overflow-x: auto; flex: 1; }
+.tok-tag { color: #ff8a5c; }
+.tok-var { color: #ffd479; }
+.tok-str { color: #a8d878; }
+.tok-op  { color: #7fb8e8; }
+.tok-dim { color: var(--panel-muted); }
+.tok-out { color: #a8d878; }
+
+/* code duo */
+.duo { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; }
+@media (max-width: 900px) { .duo { grid-template-columns: 1fr; } }
+
+/* benchmarks */
+.bench { display: flex; flex-direction: column; gap: 26px; }
+.bench-row .bench-label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; gap: 12px; flex-wrap: wrap; }
+.bench-row .bench-label h3 { font-size: 15px; font-weight: 700; }
+.bench-row .bench-label .mult {
+  font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: 13px;
+  color: var(--accent);
+}
+.bars { display: flex; flex-direction: column; gap: 6px; }
+.bar-line { display: grid; grid-template-columns: 110px 1fr 90px; gap: 12px; align-items: center; }
+.bar-line small { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+.bar-line .val { text-align: right; font-family: "JetBrains Mono", monospace; font-size: 12px; font-variant-numeric: tabular-nums; }
+.track { background: var(--bg-raise); border: 1px solid var(--line); height: 22px; }
+.fill { height: 100%; }
+.fill.veloz { background: var(--redline); }
+.fill.std { background: var(--muted); opacity: 0.45; }
+.bench-note { font-size: 13px; color: var(--muted); margin-top: 10px; }
+@media (max-width: 640px) { .bar-line { grid-template-columns: 80px 1fr 74px; } }
+
+/* features */
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+@media (max-width: 900px) { .grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+.cell { background: var(--bg); padding: 26px 24px; }
+.cell:hover { background: var(--bg-raise); }
+.cell h3 { font-size: 16px; font-weight: 700; margin: 10px 0 6px; }
+.cell p { font-size: 14px; color: var(--muted); }
+.cell code { font-size: 12px; color: var(--accent-2); }
+
+/* footer */
+footer { padding: 44px 0 60px; }
+.foot { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+.foot p { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); }
+.foot a { color: var(--muted); }
+.foot a:hover { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="redline"></div>
+<nav>
+  <div class="nav-in">
+    <a class="wordmark" href="#">VELOZ<span>.</span></a>
+    <div class="nav-links">
+      <a href="#engine">Engine</a>
+      <a href="#syntax">Syntax</a>
+      <a href="#benchmarks">Benchmarks</a>
+      <a href="docs.html">Docs</a>
+      <a href="https://github.com/victoragudo/go-veloz">GitHub</a>
+      <button id="theme-btn" aria-label="Toggle color theme">theme</button>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="speedlines"></div>
+  <div class="wrap">
+    <p class="eyebrow">A template engine for Go</p>
+    <h1>Veloz<span class="dot">.</span></h1>
+    <div class="hero-grid">
+      <div>
+        <p class="thesis">Twig-style templates, <em>compiled to bytecode</em>, executed on a stack VM. All the expressiveness. None of the drag.</p>
+        <div class="install">
+          <code><span class="cmd">go get</span> github.com/victoragudo/go-veloz</code>
+          <span class="ver">v0.1.0</span>
+          <button class="copy-btn" data-copy="go get github.com/victoragudo/go-veloz">copy</button>
+        </div>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://github.com/victoragudo/go-veloz">Star on GitHub</a>
+          <a class="btn btn-ghost" href="docs.html">Read the docs</a>
+        </div>
+      </div>
+    </div>
+    <div class="stat-strip">
+      <div class="stat"><b><i>7&times;</i> faster</b><small>loops vs text/template</small></div>
+      <div class="stat"><b><i>0</i> fixed allocs</b><small>steady-state rendering</small></div>
+      <div class="stat"><b><i>0</i> dependencies</b><small>standard library only</small></div>
+      <div class="stat"><b><i>1</i> compile</b><small>then render forever</small></div>
+    </div>
+  </div>
+</header>
+
+<section id="engine">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Parse once.<br>Run at redline.</h2>
+      <p>Most engines walk the syntax tree on every render. Veloz resolves paths, binds filters and lays out control flow at compile time. What runs at request time is compact bytecode on a pooled stack VM.</p>
+    </div>
+    <div class="pipeline">
+      <div class="panel">
+        <div class="panel-tab">01 · template <b>.tpl</b></div>
+        <pre><code><span class="tok-dim">&lt;ul&gt;</span>
+<span class="tok-tag">{% for u in users %}</span>
+  <span class="tok-dim">&lt;li&gt;</span><span class="tok-tag">{{</span> <span class="tok-var">u.Name</span> <span class="tok-op">|</span> <span class="tok-var">upper</span> <span class="tok-tag">}}</span>
+  <span class="tok-tag">{% if u.Admin %}</span><span class="tok-dim">(admin)</span><span class="tok-tag">{% endif %}</span>
+  <span class="tok-dim">&lt;/li&gt;</span>
+<span class="tok-tag">{% endfor %}</span>
+<span class="tok-dim">&lt;/ul&gt;</span></code></pre>
+      </div>
+      <div class="panel">
+        <div class="panel-tab">02 · bytecode <b>compiled</b></div>
+        <pre><code><span class="tok-dim">0000</span> <span class="tok-op">TEXT</span>       <span class="tok-str">"&lt;ul&gt;"</span>
+<span class="tok-dim">0001</span> <span class="tok-op">LOAD_VAR</span>   <span class="tok-var">users</span>
+<span class="tok-dim">0002</span> <span class="tok-op">ITER_INIT</span>  <span class="tok-dim">loop#0</span>
+<span class="tok-dim">0003</span> <span class="tok-op">ITER_NEXT</span>
+<span class="tok-dim">0004</span> <span class="tok-op">LOAD_LOCAL</span> <span class="tok-var">u</span>
+<span class="tok-dim">0005</span> <span class="tok-op">ATTR</span>       <span class="tok-var">Name</span>
+<span class="tok-dim">0006</span> <span class="tok-op">CALL</span>       <span class="tok-var">upper</span>
+<span class="tok-dim">0007</span> <span class="tok-op">ECHO</span>
+<span class="tok-dim">0008</span> <span class="tok-op">JUMP</span>       <span class="tok-dim">0003</span></code></pre>
+      </div>
+      <div class="panel">
+        <div class="panel-tab">03 · output <b>rendered</b></div>
+        <pre><code><span class="tok-out">&lt;ul&gt;
+  &lt;li&gt;MIREIA (admin)&lt;/li&gt;
+  &lt;li&gt;ALEIX&lt;/li&gt;
+  &lt;li&gt;NURIA&lt;/li&gt;
+&lt;/ul&gt;</span>
+
+<span class="tok-dim">9.4µs · 57 allocs · 50 rows
+html-escaped by default</span></code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="syntax">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Syntax you already know</h2>
+      <p>If you have written Twig, Jinja or Blade, you already write Veloz. Inheritance, filters, a real loop context and expressions that read like expressions.</p>
+    </div>
+    <div class="duo">
+      <div class="panel">
+        <div class="panel-tab">invoice.tpl</div>
+        <pre><code><span class="tok-tag">{% extends</span> <span class="tok-str">"layout"</span> <span class="tok-tag">%}</span>
+<span class="tok-tag">{% block body %}</span>
+<span class="tok-tag">{% for line in invoice.lines %}</span>
+  <span class="tok-tag">{{</span> <span class="tok-var">loop.index</span> <span class="tok-tag">}}</span>. <span class="tok-tag">{{</span> <span class="tok-var">line.concept</span> <span class="tok-op">|</span> <span class="tok-var">capitalize</span> <span class="tok-tag">}}</span>
+     <span class="tok-tag">{{</span> <span class="tok-var">line.total()</span> <span class="tok-op">|</span> <span class="tok-var">money</span> <span class="tok-tag">}}</span>
+<span class="tok-tag">{% endfor %}</span>
+Status: <span class="tok-tag">{{</span> <span class="tok-var">invoice.paid</span> <span class="tok-op">?</span> <span class="tok-str">"PAID"</span> <span class="tok-op">:</span> <span class="tok-str">"PENDING"</span> <span class="tok-tag">}}</span>
+Client: <span class="tok-tag">{{</span> <span class="tok-var">client</span> <span class="tok-op">?:</span> <span class="tok-str">"guest"</span> <span class="tok-tag">}}</span>
+<span class="tok-tag">{% endblock %}</span></code></pre>
+      </div>
+      <div class="panel">
+        <div class="panel-tab">main.go</div>
+        <pre><code><span class="tok-op">engine</span> := veloz.<span class="tok-var">New</span>()
+
+engine.<span class="tok-var">RegisterFilter</span>(<span class="tok-str">"money"</span>,
+    <span class="tok-tag">func</span>(args []veloz.Value) (veloz.Value, <span class="tok-tag">error</span>) {
+        <span class="tok-tag">return</span> veloz.<span class="tok-var">Str</span>(format(args[<span class="tok-str">0</span>])), <span class="tok-tag">nil</span>
+    })
+
+tmpl, err := engine.<span class="tok-var">Compile</span>(<span class="tok-str">"invoice"</span>, src)
+out, err := tmpl.<span class="tok-var">Render</span>(<span class="tok-tag">map</span>[<span class="tok-tag">string</span>]<span class="tok-tag">any</span>{
+    <span class="tok-str">"invoice"</span>: inv,
+    <span class="tok-str">"client"</span>:  <span class="tok-str">"Estudio Mares"</span>,
+})</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="benchmarks">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Numbers, not adjectives</h2>
+      <p>Same templates, same data, byte-identical output, verified in CI. Apple M5, Go 1.22. Lower is better.</p>
+    </div>
+    <div class="bench">
+      <div class="bench-row">
+        <div class="bench-label"><h3>Loop with full loop context · 100 rows</h3><span class="mult">6.9&times; faster</span></div>
+        <div class="bars">
+          <div class="bar-line"><small>veloz</small><div class="track"><div class="fill veloz" style="width:14.4%"></div></div><span class="val">21.3 µs</span></div>
+          <div class="bar-line"><small>text/template</small><div class="track"><div class="fill std" style="width:100%"></div></div><span class="val">147.7 µs</span></div>
+        </div>
+      </div>
+      <div class="bench-row">
+        <div class="bench-label"><h3>Escaped HTML output</h3><span class="mult">3.7&times; faster</span></div>
+        <div class="bars">
+          <div class="bar-line"><small>veloz</small><div class="track"><div class="fill veloz" style="width:27.3%"></div></div><span class="val">0.44 µs</span></div>
+          <div class="bar-line"><small>text/template</small><div class="track"><div class="fill std" style="width:100%"></div></div><span class="val">1.60 µs</span></div>
+        </div>
+      </div>
+      <div class="bench-row">
+        <div class="bench-label"><h3>Every feature at once: filters, inheritance, ternaries</h3><span class="mult">2.3&times; faster</span></div>
+        <div class="bars">
+          <div class="bar-line"><small>veloz</small><div class="track"><div class="fill veloz" style="width:43.1%"></div></div><span class="val">11.8 µs</span></div>
+          <div class="bar-line"><small>text/template</small><div class="track"><div class="fill std" style="width:100%"></div></div><span class="val">27.4 µs</span></div>
+        </div>
+      </div>
+      <div class="bench-row">
+        <div class="bench-label"><h3>Inheritance page · 100,000 rows</h3><span class="mult">1.5&times; faster</span></div>
+        <div class="bars">
+          <div class="bar-line"><small>veloz</small><div class="track"><div class="fill veloz" style="width:66.9%"></div></div><span class="val">16.8 ms</span></div>
+          <div class="bar-line"><small>text/template</small><div class="track"><div class="fill std" style="width:100%"></div></div><span class="val">25.1 ms</span></div>
+        </div>
+      </div>
+      <p class="bench-note">Every comparison renders the exact same output, checked byte by byte in the test suite. At 100k rows Veloz also allocates 12x less memory: 6.4 MB vs 81.6 MB per render.</p>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Everything on board</h2>
+    </div>
+    <div class="grid">
+      <div class="cell"><p class="eyebrow">Syntax</p><h3>Twig-style expressions</h3><p>Ternary, elvis <code>?:</code>, <code>in</code>, string concat <code>~</code>, power <code>**</code>, negative indexing, array and map literals.</p></div>
+      <div class="cell"><p class="eyebrow">Composition</p><h3>Template inheritance</h3><p><code>extends</code>, <code>block</code> with defaults and overrides, plus <code>include</code> for partials. Cycles detected at render.</p></div>
+      <div class="cell"><p class="eyebrow">Iteration</p><h3>Real loop context</h3><p><code>loop.index</code>, <code>first</code>, <code>last</code>, <code>revindex</code>, <code>length</code>, key-value maps and a <code>for/else</code> branch for empty lists.</p></div>
+      <div class="cell"><p class="eyebrow">Library</p><h3>20 built-in filters</h3><p>From <code>capitalize</code> to <code>nl2br</code>. Register your own filters and functions with one call; unknown names fail at compile time.</p></div>
+      <div class="cell"><p class="eyebrow">Safety</p><h3>Autoescape by default</h3><p>HTML output is escaped unless you mark it <code>raw</code> or return a <code>SafeString</code>. Opt out per engine when generating non-HTML.</p></div>
+      <div class="cell"><p class="eyebrow">Runtime</p><h3>Pooled, concurrent-safe</h3><p>Interpreters, stacks and locals are pooled and reused. Zero fixed allocations per render, safe across goroutines.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <p>v0.1.0 · MIT License · Built in Go, for Go</p>
+    <p><a href="https://github.com/victoragudo/go-veloz">github.com/victoragudo/go-veloz</a></p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var btn = document.getElementById("theme-btn");
+  var root = document.documentElement;
+  var stored = null;
+  try { stored = localStorage.getItem("veloz-theme"); } catch (e) {}
+  if (stored === "light" || stored === "dark") root.setAttribute("data-theme", stored);
+  btn.addEventListener("click", function () {
+    var dark = root.getAttribute("data-theme") === "dark" ||
+      (!root.getAttribute("data-theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    var next = dark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("veloz-theme", next); } catch (e) {}
+  });
+  document.querySelectorAll(".copy-btn").forEach(function (b) {
+    b.addEventListener("click", function () {
+      navigator.clipboard.writeText(b.getAttribute("data-copy")).then(function () {
+        var old = b.textContent;
+        b.textContent = "copied";
+        setTimeout(function () { b.textContent = old; }, 1400);
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>
