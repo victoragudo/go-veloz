@@ -1,0 +1,6 @@
+Escaped by default: &lt;b&gt;5 &gt; 3 &amp; &#34;quotes&#34;&lt;/b&gt;
+Marked as raw: <b>5 > 3 & "quotes"</b>
+Escape filter: 5 &gt; 3 &amp; 2 &lt; 4
+Short alias: a &amp; b
+New lines to breaks: first line<br />
+second line

@@ -1,0 +1,10 @@
+Numbers: 14 20 2.5 1 1.5 256 -3
+Strings: store-madrid
+Compare: true true true true true true
+Logic: yes fallback true
+Ternary: adult
+Elvis: guest
+Membership: true true true
+Index: 20 30
+Map literal: Madrid value
+Null values: [] []

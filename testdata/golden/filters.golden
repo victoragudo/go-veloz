@@ -1,0 +1,10 @@
+Case: HELLO hello Hello world Point Of Sale
+Trim: [padded] [word]
+Size: 3 3 6
+Default: no name Oriol
+Lists: Mireia, Aleix, Nuria | Nuria-Aleix-Mireia | Mireia | Nuria
+Keys: keyboard,mouse
+Numbers: 7.5 4 3.14 3
+Text: bat a+b+c
+Reverse text: zolev
+Edges of text: vz
