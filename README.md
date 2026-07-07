@@ -13,6 +13,10 @@
   <b><a href="#built-for-speed">Benchmarks</a></b>
 </p>
 
+Veloz is a template engine for Go. You write templates with a syntax similar to Twig, Jinja or Blade, and render them from your Go code with any data: maps, structs, slices or methods. It is made for the classic template jobs: HTML pages, emails, invoices, config files or code generation.
+
+Use it when `text/template` feels too limited or too slow. Veloz gives you template inheritance, filters and a real loop context, and it compiles every template once to bytecode so rendering stays fast under load. It has no dependencies and one engine can be shared by all your goroutines.
+
 ```
 go get github.com/victoragudo/go-veloz
 ```
