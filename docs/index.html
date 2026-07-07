@@ -287,11 +287,11 @@ footer { padding: 44px 0 60px; }
         <p class="thesis">Twig-style templates, <em>compiled to bytecode</em>, executed on a stack VM. All the expressiveness. None of the drag.</p>
         <div class="install">
           <code><span class="cmd">go get</span> github.com/victoragudo/go-veloz</code>
-          <span class="ver">v0.1.0</span>
+          <span class="ver" data-version>v0.1.0</span>
           <button class="copy-btn" data-copy="go get github.com/victoragudo/go-veloz">copy</button>
         </div>
         <div class="cta-row">
-          <a class="btn btn-primary" href="https://github.com/victoragudo/go-veloz">Star on GitHub</a>
+          <a class="btn btn-primary" href="https://github.com/victoragudo/go-veloz">Star on GitHub<span id="gh-stars"></span></a>
           <a class="btn btn-ghost" href="docs.html">Read the docs</a>
         </div>
       </div>
@@ -445,7 +445,7 @@ out, err := tmpl.<span class="tok-var">Render</span>(<span class="tok-tag">map</
 
 <footer>
   <div class="wrap foot">
-    <p>v0.1.0 · MIT License · Built in Go, for Go</p>
+    <p><span data-version>v0.1.0</span> · MIT License · Built in Go, for Go</p>
     <p><a href="https://github.com/victoragudo/go-veloz">github.com/victoragudo/go-veloz</a></p>
   </div>
 </footer>
@@ -473,6 +473,44 @@ out, err := tmpl.<span class="tok-var">Render</span>(<span class="tok-tag">map</
       });
     });
   });
+
+  var REPO = "victoragudo/go-veloz";
+  var API = "https://api.github.com/repos/" + REPO;
+  function fmtStars(n) {
+    return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "k" : String(n);
+  }
+  function applyGh(info) {
+    if (typeof info.stars === "number") {
+      var el = document.getElementById("gh-stars");
+      if (el) el.textContent = " · ★ " + fmtStars(info.stars);
+    }
+    if (info.version) {
+      document.querySelectorAll("[data-version]").forEach(function (v) {
+        v.textContent = info.version;
+      });
+    }
+  }
+  var cached = null;
+  try { cached = JSON.parse(sessionStorage.getItem("veloz-gh") || "null"); } catch (e) {}
+  if (cached) { applyGh(cached); return; }
+  var info = {};
+  fetch(API)
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (d) info.stars = d.stargazers_count;
+      return fetch(API + "/releases/latest");
+    })
+    .then(function (r) { return r && r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (d && d.tag_name) { info.version = d.tag_name; return null; }
+      return fetch(API + "/tags").then(function (r) { return r.ok ? r.json() : null; });
+    })
+    .then(function (tags) {
+      if (tags && tags.length) info.version = tags[0].name;
+      applyGh(info);
+      try { sessionStorage.setItem("veloz-gh", JSON.stringify(info)); } catch (e) {}
+    })
+    .catch(function () {});
 })();
 </script>
 </body>
