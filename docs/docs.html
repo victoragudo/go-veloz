@@ -189,6 +189,7 @@ footer { border-top: 1px solid var(--line); padding: 34px 24px 50px; }
 <aside>
   <div class="group"><span>Start</span>
     <a href="#install">Install and render</a>
+    <a href="#loaders">Loading from files</a>
     <a href="#delimiters">Delimiters</a>
   </div>
   <div class="group"><span>Language</span>
@@ -224,7 +225,39 @@ tmpl, err := engine.<span class="tok-var">Compile</span>(<span class="tok-str">"
 out, err := tmpl.<span class="tok-var">Render</span>(<span class="tok-tag">map</span>[<span class="tok-tag">string</span>]<span class="tok-tag">any</span>{<span class="tok-str">"name"</span>: <span class="tok-str">"mireia"</span>})</code></pre>
     <div class="out">Hola Mireia!</div>
   </div>
-  <p class="note"><b>Note</b> compile errors are real errors: an unknown filter or a broken tag fails at <code>Compile</code> time, not in production at render time.</p>
+  <p class="note"><b>Note</b> compile errors are real errors with a position: an unknown filter or a broken tag fails at <code>Compile</code> time with <code>invoice.tpl:14:3: unknown filter "slugg"</code>, not in production at render time.</p>
+</section>
+
+<section class="doc" id="loaders">
+  <h2>Loading from files</h2>
+  <p>Point the engine at any <code>fs.FS</code> and load templates lazily by path. Works with a directory on disk or with <code>embed.FS</code>, so templates ship inside your binary.</p>
+  <div class="panel">
+    <div class="panel-tab">main.go</div>
+    <pre><code><span class="tok-tag">import</span> <span class="tok-str">"embed"</span>
+
+<span class="tok-dim">//go:embed templates</span>
+<span class="tok-tag">var</span> content embed.FS
+
+engine := veloz.<span class="tok-var">New</span>(veloz.<span class="tok-var">WithFS</span>(content))
+page, err := engine.<span class="tok-var">Load</span>(<span class="tok-str">"templates/pages/home.tpl"</span>)
+out, err := page.<span class="tok-var">Render</span>(data)</code></pre>
+  </div>
+  <p class="note"><b>Lazy and cached</b> a template compiles the first time it is loaded and stays cached. <code>extends</code> and <code>include</code> load their targets through the same cache, so loading one page pulls in its whole layout chain.</p>
+  <h3>Relative paths</h3>
+  <p>Inside a template, <code>extends</code> and <code>include</code> accept paths relative to the template itself:</p>
+  <div class="panel">
+    <div class="panel-tab">pages/home.tpl</div>
+    <pre><code><span class="tok-tag">{% extends</span> <span class="tok-str">"../layout.tpl"</span> <span class="tok-tag">%}</span>
+<span class="tok-tag">{% block body %}{% include</span> <span class="tok-str">"./hero.tpl"</span> <span class="tok-tag">%}{% endblock %}</span></code></pre>
+  </div>
+  <h3>Hot reload in development</h3>
+  <div class="panel">
+    <pre><code>engine := veloz.<span class="tok-var">New</span>(
+    veloz.<span class="tok-var">WithFS</span>(os.<span class="tok-var">DirFS</span>(<span class="tok-str">"./templates"</span>)),
+    veloz.<span class="tok-var">WithReload</span>(<span class="tok-tag">true</span>),
+)</code></pre>
+  </div>
+  <p class="note"><b>Reload</b> checks the file modification time on every load and recompiles when it changed. Use it only in development; <code>embed.FS</code> has no real modification times, so reload only applies to disk filesystems.</p>
 </section>
 
 <section class="doc" id="delimiters">
@@ -416,6 +449,12 @@ c</code></pre>
     <div class="filter"><header><code>escape</code><small>html · alias e</small></header><p>Escapes HTML and marks the result safe.</p><div class="ex"><b>{{ "a &amp; b" | escape }}</b><i>a &amp;amp; b</i></div></div>
     <div class="filter"><header><code>raw</code><small>html</small></header><p>Marks a value as safe, skipping autoescape.</p><div class="ex"><b>{{ html | raw }}</b><i>&lt;b&gt;bold&lt;/b&gt;</i></div></div>
     <div class="filter"><header><code>nl2br</code><small>html</small></header><p>Escapes, then turns new lines into <code>&lt;br /&gt;</code>.</p><div class="ex"><b>{{ notes | nl2br }}</b><i>first line&lt;br /&gt;second line</i></div></div>
+    <div class="filter"><header><code>truncate</code><small>strings</small></header><p>Cuts to N characters and appends a suffix, "..." by default.</p><div class="ex"><b>{{ "temporada de rebajas" | truncate(9) }}</b><i>temporada...</i></div></div>
+    <div class="filter"><header><code>slice</code><small>lists · strings</small></header><p>Takes a part: start index (negatives count from the end) and optional length.</p><div class="ex"><b>{{ [10, 20, 30, 40] | slice(1, 2) | join(",") }}</b><i>20,30</i></div></div>
+    <div class="filter"><header><code>batch</code><small>lists</small></header><p>Groups items in rows of N, with an optional fill value for the last row.</p><div class="ex"><b>{{ [1, 2, 3] | batch(2, 0) }}</b><i>[1,2] [3,0]</i></div></div>
+    <div class="filter"><header><code>sort</code><small>lists</small></header><p>Sorts ascending. Pass an attribute name to sort structs or maps by a field.</p><div class="ex"><b>{{ team | sort("score") | map("name") }}</b><i>Aleix, Nuria, Mireia</i></div></div>
+    <div class="filter"><header><code>map</code><small>lists</small></header><p>Applies a filter by name to every item, or extracts an attribute from each one.</p><div class="ex"><b>{{ names | map("upper") | join(",") }}</b><i>NURIA,ALEIX,MIREIA</i></div></div>
+    <div class="filter"><header><code>date</code><small>time</small></header><p>Formats a time.Time, unix seconds or a date string with a Go layout.</p><div class="ex"><b>{{ launch | date("02/01/2006") }}</b><i>08/07/2026</i></div></div>
   </div>
 </section>
 
@@ -456,8 +495,12 @@ engine.<span class="tok-var">RegisterFunction</span>(<span class="tok-str">"toda
     <tr><th>Call</th><th>What it does</th></tr>
     <tr><td><code>veloz.New(opts...)</code></td><td>Creates an engine with the built-in filters and functions registered</td></tr>
     <tr><td><code>veloz.WithAutoescape(false)</code></td><td>Option: disable HTML escaping for this engine</td></tr>
+    <tr><td><code>veloz.WithFS(fsys)</code></td><td>Option: load templates lazily from any <code>fs.FS</code>, including <code>embed.FS</code></td></tr>
+    <tr><td><code>veloz.WithReload(true)</code></td><td>Option: recompile a template when its file changes, for development</td></tr>
     <tr><td><code>engine.Compile(name, src)</code></td><td>Parses and compiles to bytecode, registers the template under its name</td></tr>
     <tr><td><code>engine.MustCompile(name, src)</code></td><td>Same, panics on error. For templates known at build time</td></tr>
+    <tr><td><code>engine.Load(name)</code></td><td>Returns the template with that path, compiling it from the filesystem if needed</td></tr>
+    <tr><td><code>engine.MustLoad(name)</code></td><td>Same, panics on error</td></tr>
     <tr><td><code>engine.Get(name)</code></td><td>Returns an already compiled template</td></tr>
     <tr><td><code>tmpl.Render(data)</code></td><td>Renders to a string</td></tr>
     <tr><td><code>tmpl.RenderTo(w, data)</code></td><td>Renders straight into an <code>io.Writer</code>, no intermediate copy</td></tr>

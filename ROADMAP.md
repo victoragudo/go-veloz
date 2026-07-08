@@ -2,15 +2,20 @@
 
 This is the current direction of the project. It is not a promise: items can move between versions based on feedback and real use. Open an issue if you want to influence the order.
 
-## v0.2
+## v0.2 · shipped
 
-- **Template loaders.** Load templates from a directory or an `fs.FS` (including `embed.FS`), with automatic name resolution for `extends` and `include`. Today every template is compiled by hand with `Compile`.
-- **Positions in compile errors.** The lexer and parser already report line numbers; compile errors like "unknown filter" should point to the exact line and column too.
+- ~~**Template loaders.**~~ `WithFS`, `Load`, lazy cache, `WithReload` and relative paths in `extends` and `include`.
+- ~~**Positions in compile errors.**~~ Compile errors report template name, line and column.
+- ~~**More built-in filters.**~~ `truncate`, `slice`, `batch`, `sort`, `map`, `date`.
+
+## Next
+
 - **Constant folding.** `{{ 2 + 3 * 4 }}` should compile to a single constant instead of five instructions.
-- **More built-in filters.** Candidates: `sort`, `map`, `slice`, `batch`, `date`, `number_format`, `trim` variants.
 - **Fuzzing in CI, longer runs.** Keep the smoke fuzz on every pull request and add a scheduled job with longer fuzz time.
 
 ## v0.3 and later
+
+- **Positions in render errors.** Map bytecode instructions back to template positions so runtime failures point at the template line too.
 
 - **Cached inheritance resolution.** Resolve the extends chain once per template instead of on every render.
 - **Specialized iterators.** Iterate native slice types without boxing every element through reflection, removing the remaining per-row allocation.

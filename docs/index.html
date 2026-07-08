@@ -287,7 +287,7 @@ footer { padding: 44px 0 60px; }
         <p class="thesis">Twig-style templates, <em>compiled to bytecode</em>, executed on a stack VM. All the expressiveness. None of the drag.</p>
         <div class="install">
           <code><span class="cmd">go get</span> github.com/victoragudo/go-veloz</code>
-          <span class="ver" data-version>v0.1.0</span>
+          <span class="ver" data-version>v0.2.0</span>
           <button class="copy-btn" data-copy="go get github.com/victoragudo/go-veloz">copy</button>
         </div>
         <div class="cta-row">
@@ -436,7 +436,7 @@ out, err := tmpl.<span class="tok-var">Render</span>(<span class="tok-tag">map</
       <div class="cell"><p class="eyebrow">Syntax</p><h3>Twig-style expressions</h3><p>Ternary, elvis <code>?:</code>, <code>in</code>, string concat <code>~</code>, power <code>**</code>, negative indexing, array and map literals.</p></div>
       <div class="cell"><p class="eyebrow">Composition</p><h3>Template inheritance</h3><p><code>extends</code>, <code>block</code> with defaults and overrides, plus <code>include</code> for partials. Cycles detected at render.</p></div>
       <div class="cell"><p class="eyebrow">Iteration</p><h3>Real loop context</h3><p><code>loop.index</code>, <code>first</code>, <code>last</code>, <code>revindex</code>, <code>length</code>, key-value maps and a <code>for/else</code> branch for empty lists.</p></div>
-      <div class="cell"><p class="eyebrow">Library</p><h3>20 built-in filters</h3><p>From <code>capitalize</code> to <code>nl2br</code>. Register your own filters and functions with one call; unknown names fail at compile time.</p></div>
+      <div class="cell"><p class="eyebrow">Library</p><h3>25+ built-in filters</h3><p>From <code>capitalize</code> to <code>sort</code>, <code>map</code> and <code>date</code>. Register your own with one call; unknown names fail at compile time with line and column.</p></div>
       <div class="cell"><p class="eyebrow">Safety</p><h3>Autoescape by default</h3><p>HTML output is escaped unless you mark it <code>raw</code> or return a <code>SafeString</code>. Opt out per engine when generating non-HTML.</p></div>
       <div class="cell"><p class="eyebrow">Runtime</p><h3>Pooled, concurrent-safe</h3><p>Interpreters, stacks and locals are pooled and reused. Zero fixed allocations per render, safe across goroutines.</p></div>
     </div>
@@ -445,7 +445,7 @@ out, err := tmpl.<span class="tok-var">Render</span>(<span class="tok-tag">map</
 
 <footer>
   <div class="wrap foot">
-    <p><span data-version>v0.1.0</span> · MIT License · Built in Go, for Go</p>
+    <p><span data-version>v0.2.0</span> · MIT License · Built in Go, for Go</p>
     <p><a href="https://github.com/victoragudo/go-veloz">github.com/victoragudo/go-veloz</a></p>
   </div>
 </footer>

@@ -77,7 +77,9 @@ Same templates, same data, **byte-identical output** verified in the test suite.
 | **Twig-style expressions** | Ternary, elvis `?:`, `in`, string concat `~`, power `**`, negative indexing, array and map literals |
 | **Template inheritance** | `extends`, `block` with defaults and overrides, `include` for partials, cycle detection |
 | **Real loop context** | `loop.index`, `first`, `last`, `revindex`, `length`, key-value iteration, `for/else` for empty lists |
-| **20 built-in filters** | From `capitalize` to `nl2br`, plus custom filters and functions registered in one call |
+| **25+ built-in filters** | From `capitalize` to `sort`, `map` and `date`, plus custom filters and functions registered in one call |
+| **Load from anywhere** | Compile from strings or load lazily from any `fs.FS` including `embed.FS`, with relative paths and optional hot reload |
+| **Errors with position** | Compile errors point at the exact place: `invoice.tpl:14:3: unknown filter "slugg"` |
 | **Safe by default** | HTML autoescape with `raw` and `SafeString` escape hatches, model documented in [SECURITY.md](SECURITY.md) |
 | **Fails at compile time** | Unknown filters and broken tags break `Compile`, never a production render |
 | **Fuzzed** | Compiler and runtime are fuzz-tested, with a fuzz smoke check on every pull request |
