@@ -5,14 +5,16 @@ import "fmt"
 func registerFunctions(e *Engine) {
 	fns := map[string]Callable{
 		"range":  fnRange,
-		"max":    fnMax,
-		"min":    fnMin,
-		"length": filterLength,
+		"max":    requireArg("max", fnMax),
+		"min":    requireArg("min", fnMin),
+		"length": requireArg("length", filterLength),
 	}
 	for name, fn := range fns {
 		e.functions[name] = fn
 	}
 }
+
+const maxRangeItems = 1_000_000
 
 func fnRange(args []Value) (Value, error) {
 	if len(args) < 2 {
@@ -30,13 +32,30 @@ func fnRange(args []Value) (Value, error) {
 		}
 	}
 	var out []Value
+	appendItem := func(i int64) error {
+		if len(out) >= maxRangeItems {
+			return fmt.Errorf("range: too many elements (limit %d)", maxRangeItems)
+		}
+		out = append(out, Int(i))
+		return nil
+	}
 	if step > 0 {
 		for i := start; i <= end; i += step {
-			out = append(out, Int(i))
+			if err := appendItem(i); err != nil {
+				return Nil(), err
+			}
+			if i > end-step {
+				break
+			}
 		}
 	} else {
 		for i := start; i >= end; i += step {
-			out = append(out, Int(i))
+			if err := appendItem(i); err != nil {
+				return Nil(), err
+			}
+			if i < end-step {
+				break
+			}
 		}
 	}
 	return Object(out), nil

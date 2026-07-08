@@ -13,6 +13,15 @@ import (
 	"github.com/victoragudo/go-veloz/internal/runtime"
 )
 
+func requireArg(name string, fn Callable) Callable {
+	return func(args []Value) (Value, error) {
+		if len(args) == 0 {
+			return Nil(), fmt.Errorf("%s: missing argument", name)
+		}
+		return fn(args)
+	}
+}
+
 func registerFilters(e *Engine) {
 	f := map[string]Callable{
 		"upper":      filterUpper,
@@ -38,7 +47,7 @@ func registerFilters(e *Engine) {
 		"nl2br":      filterNl2br,
 	}
 	for name, fn := range f {
-		e.filters[name] = fn
+		e.filters[name] = requireArg(name, fn)
 	}
 }
 

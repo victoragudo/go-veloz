@@ -7,12 +7,25 @@ import (
 	"github.com/victoragudo/go-veloz/internal/runtime"
 )
 
+const maxNestingDepth = 500
+
 type parser struct {
 	toks   []Token
 	pos    int
 	blocks map[string]*BlockNode
 	parent string
+	depth  int
 }
+
+func (p *parser) enterNesting() error {
+	p.depth++
+	if p.depth > maxNestingDepth {
+		return p.errf("template is nested too deeply (limit %d)", maxNestingDepth)
+	}
+	return nil
+}
+
+func (p *parser) leaveNesting() { p.depth-- }
 
 func Parse(src string) (*Template, error) {
 	toks, err := Lex(src)
@@ -60,6 +73,10 @@ func (p *parser) errf(format string, args ...any) error {
 }
 
 func (p *parser) parseBody(stops map[string]bool) ([]Node, string, error) {
+	if err := p.enterNesting(); err != nil {
+		return nil, "", err
+	}
+	defer p.leaveNesting()
 	var nodes []Node
 	for {
 		t := p.cur()
@@ -304,6 +321,10 @@ func (p *parser) parseExtends() (Node, error) {
 }
 
 func (p *parser) parseExpr() (Expr, error) {
+	if err := p.enterNesting(); err != nil {
+		return nil, err
+	}
+	defer p.leaveNesting()
 	return p.parseTernary()
 }
 
