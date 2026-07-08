@@ -66,7 +66,7 @@ Client: {{ client ?: "guest" }}
 
 ## Built for speed
 
-Same templates, same data, **byte-identical output** verified in the test suite. Run them yourself with `go test -bench . -benchmem`.
+Same templates, same data, **byte-identical output** verified in the test suite. Full tables, methodology and reproduction steps in [BENCHMARKS.md](BENCHMARKS.md), or run `go test -bench . -benchmem` yourself.
 
 <img src="docs/assets/benchmarks.png" alt="Benchmarks against text/template: 6.9x faster loops, 3.7x faster escaped output, 2.3x faster with every feature at once, 1.5x faster and 12x less memory on a 100,000 row inheritance page.">
 
@@ -78,13 +78,18 @@ Same templates, same data, **byte-identical output** verified in the test suite.
 | **Template inheritance** | `extends`, `block` with defaults and overrides, `include` for partials, cycle detection |
 | **Real loop context** | `loop.index`, `first`, `last`, `revindex`, `length`, key-value iteration, `for/else` for empty lists |
 | **20 built-in filters** | From `capitalize` to `nl2br`, plus custom filters and functions registered in one call |
-| **Safe by default** | HTML autoescape with `raw` and `SafeString` escape hatches |
+| **Safe by default** | HTML autoescape with `raw` and `SafeString` escape hatches, model documented in [SECURITY.md](SECURITY.md) |
 | **Fails at compile time** | Unknown filters and broken tags break `Compile`, never a production render |
+| **Fuzzed** | Compiler and runtime are fuzz-tested, with a fuzz smoke check on every pull request |
 | **Zero dependencies** | Standard library only, concurrent-safe engine, pooled interpreters |
 
-## Documentation
+## Documentation and examples
 
 The full reference lives at **[victoragudo.github.io/go-veloz/docs.html](https://victoragudo.github.io/go-veloz/docs.html)**: expressions, filters, functions, loops, inheritance, autoescape and the Go API, each with examples and their exact output.
+
+Runnable programs live in [`examples/`](examples): an HTML page with inheritance, a transactional email, an invoice with custom filters and an nginx config generator. Run any of them with `go run ./examples/<name>`.
+
+Where the project goes next is in [ROADMAP.md](ROADMAP.md), and every change is tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ## Contributing
 
