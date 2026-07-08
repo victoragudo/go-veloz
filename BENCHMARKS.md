@@ -22,7 +22,7 @@ go test -bench BenchmarkCompile -benchmem -run '^$'    # compilation speed
 - Every comparison renders the same template pair: a Veloz template and its `text/template` equivalent.
 - The outputs are byte-identical, enforced by `TestFeatureParity` and `TestGoTemplateSuiteParity`. If the outputs differ, the tests fail, so the benchmarks cannot drift into comparing different work.
 - `text/template` gets a `FuncMap` with equivalent helpers where it lacks a built-in (loop metadata, filters). This favors readability, not Veloz: the helpers are simple Go functions.
-- Reference machine: Apple M5, Go 1.22, darwin/arm64. Run on your own hardware for your own numbers; ratios are what matter.
+- Reference machine: Apple M5, Go 1.26, darwin/arm64. Run on your own hardware for your own numbers; ratios are what matter.
 
 ## Results
 
