@@ -21,7 +21,7 @@ func compileSrc(t *testing.T, src string) *runtime.Program {
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	prog, err := Compile(ast, fakeResolver{}, false)
+	prog, err := Compile("test", ast, fakeResolver{}, false)
 	if err != nil {
 		t.Fatalf("compile: %v", err)
 	}

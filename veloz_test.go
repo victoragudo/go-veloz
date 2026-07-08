@@ -3,6 +3,7 @@ package veloz_test
 import (
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/victoragudo/go-veloz"
 )
@@ -143,6 +144,49 @@ func TestFilters(t *testing.T) {
 		{"default_keep", `{{ "Oriol" | default("x") }}`, "Oriol"},
 		{"replace", `{{ "gato" | replace("g", "p") }}`, "pato"},
 		{"function_form", `{{ upper("hola") }}`, "HOLA"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := render(t, tc.src, data); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCollectionFilters(t *testing.T) {
+	data := map[string]any{
+		"names": []string{"Nuria", "Aleix", "Mireia"},
+		"team": []map[string]any{
+			{"name": "Mireia", "score": 91},
+			{"name": "Aleix", "score": 73},
+			{"name": "Nuria", "score": 88},
+		},
+		"launch": time.Date(2026, 7, 8, 9, 30, 0, 0, time.UTC),
+	}
+	cases := []struct {
+		name string
+		src  string
+		want string
+	}{
+		{"truncate", `{{ "temporada de rebajas" | truncate(9) }}`, "temporada..."},
+		{"truncate_suffix", `{{ "temporada" | truncate(4, "~") }}`, "temp~"},
+		{"truncate_short", `{{ "corto" | truncate(10) }}`, "corto"},
+		{"slice_list", `{{ [10, 20, 30, 40] | slice(1, 2) | join(",") }}`, "20,30"},
+		{"slice_negative", `{{ [10, 20, 30, 40] | slice(-2) | join(",") }}`, "30,40"},
+		{"slice_string", `{{ "catalunya" | slice(0, 4) }}`, "cata"},
+		{"batch", `{% for row in [1, 2, 3, 4, 5] | batch(2) %}[{{ row | join(",") }}]{% endfor %}`, "[1,2][3,4][5]"},
+		{"batch_fill", `{% for row in [1, 2, 3] | batch(2, 0) %}[{{ row | join(",") }}]{% endfor %}`, "[1,2][3,0]"},
+		{"sort", `{{ names | sort | join(",") }}`, "Aleix,Mireia,Nuria"},
+		{"sort_numbers", `{{ [3, 1, 2] | sort | join(",") }}`, "1,2,3"},
+		{"sort_attribute", `{{ team | sort("score") | map("name") | join(",") }}`, "Aleix,Nuria,Mireia"},
+		{"map_attribute", `{{ team | map("name") | join(",") }}`, "Mireia,Aleix,Nuria"},
+		{"map_filter", `{{ names | map("upper") | join(",") }}`, "NURIA,ALEIX,MIREIA"},
+		{"map_filter_args", `{{ [1.234, 5.678] | map("round", 1) | join(",") }}`, "1.2,5.7"},
+		{"date_time", `{{ launch | date("02/01/2006 15:04") }}`, "08/07/2026 09:30"},
+		{"date_default", `{{ launch | date }}`, "2026-07-08 09:30:00"},
+		{"date_string", `{{ "2026-07-08" | date("Jan 2, 2006") }}`, "Jul 8, 2026"},
+		{"date_unix", `{{ 1783502100 | date("2006-01-02") }}`, "2026-07-08"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
