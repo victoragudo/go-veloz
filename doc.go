@@ -17,7 +17,9 @@
 //
 // The engine supports expressions, filters and functions (sharing one namespace),
 // if/elseif/else, for loops with a loop context, set, automatic HTML escaping,
-// template inheritance via extends/block, and include. Register custom behaviour with
-// RegisterFilter and RegisterFunction; expose custom attributes on your own types by
-// implementing Attributer.
+// template inheritance via extends/block, and include. Templates can be compiled
+// from strings or loaded lazily from any fs.FS (including embed.FS) with WithFS,
+// with optional recompilation on change via WithReload. Register custom behaviour
+// with RegisterFilter and RegisterFunction; expose custom attributes on your own
+// types by implementing Attributer.
 package veloz

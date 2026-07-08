@@ -19,6 +19,8 @@ type accessor func(reflect.Value) (Value, bool)
 
 var accessorCache sync.Map
 
+func (v Value) Attr(name string) Value { return resolveAttr(v, name) }
+
 func resolveAttr(v Value, name string) Value {
 	switch v.kind {
 	case KindObject:
@@ -35,7 +37,7 @@ func resolveAttr(v Value, name string) Value {
 }
 
 func reflectAttr(rv reflect.Value, name string) Value {
-	for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
+	for rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface {
 		if rv.IsNil() {
 			return Nil()
 		}
@@ -89,7 +91,7 @@ func buildAccessor(typ reflect.Type, name string) accessor {
 				return callNoArg(rv.Method(mIndex))
 			}
 		}
-		if m, ok := methodByName(reflect.PtrTo(typ), candidate); ok {
+		if m, ok := methodByName(reflect.PointerTo(typ), candidate); ok {
 			mIndex := m.Index
 			return func(rv reflect.Value) (Value, bool) {
 				if rv.CanAddr() {
@@ -111,7 +113,7 @@ func methodByName(typ reflect.Type, name string) (reflect.Method, bool) {
 	}
 	mt := m.Type
 	in := mt.NumIn()
-	if typ.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Pointer {
 		in--
 	}
 	if in != 0 {
@@ -174,7 +176,7 @@ func resolveIndex(v Value, idx Value) Value {
 		return Nil()
 	}
 	rv := reflect.ValueOf(v.obj)
-	for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
+	for rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface {
 		if rv.IsNil() {
 			return Nil()
 		}
@@ -212,6 +214,8 @@ func resolveIndex(v Value, idx Value) Value {
 		if idx.kind == KindString {
 			return reflectAttr(rv, idx.str)
 		}
+	default:
+		return Nil()
 	}
 	return Nil()
 }
@@ -234,6 +238,7 @@ func (v Value) toInt() (int64, bool) {
 			return 0, false
 		}
 		return int64(f), true
+	default:
+		return 0, false
 	}
-	return 0, false
 }

@@ -202,7 +202,7 @@ func contains(item, seq Value) bool {
 		return strings.Contains(seq.str, item.String())
 	case KindObject:
 		rv := reflect.ValueOf(seq.obj)
-		for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
+		for rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface {
 			if rv.IsNil() {
 				return false
 			}

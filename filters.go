@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/victoragudo/go-veloz/internal/runtime"
@@ -45,6 +46,12 @@ func registerFilters(e *Engine) {
 		"e":          filterEscape,
 		"raw":        filterRaw,
 		"nl2br":      filterNl2br,
+		"truncate":   filterTruncate,
+		"slice":      filterSlice,
+		"batch":      filterBatch,
+		"sort":       filterSort,
+		"date":       filterDate,
+		"map":        e.filterMap,
 	}
 	for name, fn := range f {
 		e.filters[name] = requireArg(name, fn)
@@ -99,7 +106,7 @@ func toList(v Value) []Value {
 		return nil
 	}
 	rv := reflect.ValueOf(raw)
-	for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
+	for rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface {
 		if rv.IsNil() {
 			return nil
 		}
@@ -242,7 +249,7 @@ func filterKeys(args []Value) (Value, error) {
 		return Object([]Value{}), nil
 	}
 	rv := reflect.ValueOf(raw)
-	for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
+	for rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface {
 		if rv.IsNil() {
 			return Object([]Value{}), nil
 		}
@@ -341,4 +348,155 @@ func filterNl2br(args []Value) (Value, error) {
 	s := html.EscapeString(args[0].String())
 	s = strings.ReplaceAll(s, "\n", "<br />\n")
 	return Object(SafeString(s)), nil
+}
+
+const defaultTruncateLen = 255
+
+func filterTruncate(args []Value) (Value, error) {
+	s := args[0].String()
+	length := int64(defaultTruncateLen)
+	if len(args) >= 2 {
+		if n, ok := asInt(args[1]); ok && n >= 0 {
+			length = n
+		}
+	}
+	suffix := "..."
+	if len(args) >= 3 {
+		suffix = args[2].String()
+	}
+	r := []rune(s)
+	if int64(len(r)) <= length {
+		return Str(s), nil
+	}
+	return Str(string(r[:length]) + suffix), nil
+}
+
+func filterSlice(args []Value) (Value, error) {
+	if len(args) < 2 {
+		return Nil(), fmt.Errorf("slice: expects a start index")
+	}
+	start, ok := asInt(args[1])
+	if !ok {
+		return Nil(), fmt.Errorf("slice: start must be numeric")
+	}
+	sliceBounds := func(size int64) (int64, int64) {
+		if start < 0 {
+			start += size
+		}
+		start = min(max(start, 0), size)
+		end := size
+		if len(args) >= 3 {
+			if length, lok := asInt(args[2]); lok && length >= 0 {
+				end = min(start+length, size)
+			}
+		}
+		return start, end
+	}
+	if args[0].Kind() == runtime.KindString {
+		r := []rune(args[0].String())
+		from, to := sliceBounds(int64(len(r)))
+		return Str(string(r[from:to])), nil
+	}
+	list := toList(args[0])
+	from, to := sliceBounds(int64(len(list)))
+	return Object(list[from:to]), nil
+}
+
+func filterBatch(args []Value) (Value, error) {
+	if len(args) < 2 {
+		return Nil(), fmt.Errorf("batch: expects a group size")
+	}
+	size, ok := asInt(args[1])
+	if !ok || size <= 0 {
+		return Nil(), fmt.Errorf("batch: size must be a positive number")
+	}
+	list := toList(args[0])
+	out := make([]Value, 0, (int64(len(list))+size-1)/size)
+	for from := int64(0); from < int64(len(list)); from += size {
+		to := min(from+size, int64(len(list)))
+		group := make([]Value, to-from, size)
+		copy(group, list[from:to])
+		if len(args) >= 3 {
+			for int64(len(group)) < size {
+				group = append(group, args[2])
+			}
+		}
+		out = append(out, Object(group))
+	}
+	return Object(out), nil
+}
+
+func filterSort(args []Value) (Value, error) {
+	list := toList(args[0])
+	attr := ""
+	if len(args) >= 2 {
+		attr = args[1].String()
+	}
+	sort.SliceStable(list, func(i, j int) bool {
+		a, b := list[i], list[j]
+		if attr != "" {
+			a, b = a.Attr(attr), b.Attr(attr)
+		}
+		return compareValues(a, b) < 0
+	})
+	return Object(list), nil
+}
+
+const defaultDateLayout = "2006-01-02 15:04:05"
+
+func filterDate(args []Value) (Value, error) {
+	t, ok := toTime(args[0])
+	if !ok {
+		return Nil(), fmt.Errorf("date: cannot interpret %q as a time", args[0].String())
+	}
+	layout := defaultDateLayout
+	if len(args) >= 2 {
+		layout = args[1].String()
+	}
+	return Str(t.Format(layout)), nil
+}
+
+func toTime(v Value) (time.Time, bool) {
+	switch x := v.Interface().(type) {
+	case time.Time:
+		return x, true
+	case *time.Time:
+		if x != nil {
+			return *x, true
+		}
+	case int64:
+		return time.Unix(x, 0).UTC(), true
+	case float64:
+		return time.Unix(int64(x), 0).UTC(), true
+	case string:
+		for _, layout := range []string{time.RFC3339, defaultDateLayout, "2006-01-02"} {
+			if t, err := time.Parse(layout, x); err == nil {
+				return t, true
+			}
+		}
+	}
+	return time.Time{}, false
+}
+
+func (e *Engine) filterMap(args []Value) (Value, error) {
+	if len(args) < 2 {
+		return Nil(), fmt.Errorf("map: expects a filter or attribute name")
+	}
+	list := toList(args[0])
+	name := args[1].String()
+	out := make([]Value, len(list))
+	if fn, ok := e.ResolveCallable(name, true); ok {
+		for i, item := range list {
+			v, err := fn(append([]Value{item}, args[2:]...))
+			if err != nil {
+				return Nil(), fmt.Errorf("map: %w", err)
+			}
+			out[i] = v
+		}
+		return Object(out), nil
+	}
+	for i, item := range list {
+		out[i] = item.Attr(name)
+	}
+	return Object(out), nil
 }

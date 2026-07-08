@@ -1,6 +1,12 @@
 package compile
 
-import "github.com/victoragudo/go-veloz/internal/runtime"
+import (
+	"fmt"
+	"path"
+	"strings"
+
+	"github.com/victoragudo/go-veloz/internal/runtime"
+)
 
 type Resolver interface {
 	ResolveCallable(name string, filter bool) (runtime.Callable, bool)
@@ -11,6 +17,7 @@ type scope struct {
 }
 
 type compiler struct {
+	name       string
 	res        Resolver
 	autoescape bool
 
@@ -29,9 +36,9 @@ type compiler struct {
 	err error
 }
 
-func Compile(tmpl *Template, res Resolver, autoescape bool) (*runtime.Program, error) {
+func Compile(name string, tmpl *Template, res Resolver, autoescape bool) (*runtime.Program, error) {
 	blocks := map[string]*runtime.Program{}
-	c := newCompiler(res, autoescape, blocks)
+	c := newCompiler(name, res, autoescape, blocks)
 	c.enterScope()
 	for _, n := range tmpl.Nodes {
 		c.node(n)
@@ -40,25 +47,37 @@ func Compile(tmpl *Template, res Resolver, autoescape bool) (*runtime.Program, e
 		}
 	}
 	return &runtime.Program{
+		Name:       name,
 		Instrs:     c.instrs,
 		Consts:     c.consts,
 		Callables:  c.callables,
 		Loops:      c.loops,
 		NumLocals:  c.numLocals,
 		Blocks:     blocks,
-		Parent:     tmpl.Parent,
+		Parent:     resolveRelative(name, tmpl.Parent),
 		Autoescape: autoescape,
 	}, nil
 }
 
-func newCompiler(res Resolver, autoescape bool, blocks map[string]*runtime.Program) *compiler {
+func newCompiler(name string, res Resolver, autoescape bool, blocks map[string]*runtime.Program) *compiler {
 	return &compiler{
+		name:        name,
 		res:         res,
 		autoescape:  autoescape,
 		constIdx:    map[string]int{},
 		callableIdx: map[string]int{},
 		blocks:      blocks,
 	}
+}
+
+func resolveRelative(base, ref string) string {
+	if ref == "" {
+		return ref
+	}
+	if strings.HasPrefix(ref, "./") || strings.HasPrefix(ref, "../") {
+		return path.Join(path.Dir(base), ref)
+	}
+	return ref
 }
 
 func (c *compiler) enterScope() {
@@ -128,8 +147,9 @@ func constKey(v runtime.Value) string {
 		return "b:" + v.String()
 	case runtime.KindNil:
 		return "n:"
+	default:
+		return ""
 	}
-	return ""
 }
 
 func (c *compiler) resolveCallable(name string, filter bool) (int, bool) {
@@ -151,9 +171,9 @@ func (c *compiler) resolveCallable(name string, filter bool) (int, bool) {
 	return idx, true
 }
 
-func (c *compiler) fail(format string, args ...any) {
+func (c *compiler) fail(pos Pos, format string, args ...any) {
 	if c.err == nil {
-		c.err = &CompileError{Message: sprintf(format, args...)}
+		c.err = &Error{Line: pos.Line, Col: pos.Col, Message: fmt.Sprintf(format, args...)}
 	}
 }
 
@@ -251,7 +271,7 @@ func (c *compiler) compileBlock(n *BlockNode) {
 	nameIdx := c.addConst(runtime.Str(n.Name))
 	c.emit(runtime.OpRenderBlock, nameIdx)
 
-	sub := newCompiler(c.res, c.autoescape, c.blocks)
+	sub := newCompiler(c.name, c.res, c.autoescape, c.blocks)
 	sub.enterScope()
 	for _, bn := range n.Body {
 		sub.node(bn)
@@ -274,10 +294,11 @@ func (c *compiler) compileBlock(n *BlockNode) {
 func (c *compiler) compileInclude(n *IncludeNode) {
 	lit, ok := n.Name.(*LiteralExpr)
 	if !ok || lit.Val.Kind() != runtime.KindString {
-		c.fail("include requires a string literal template name")
+		c.fail(n.Pos, "include requires a string literal template name")
 		return
 	}
-	c.emit(runtime.OpInclude, c.addConst(lit.Val))
+	target := resolveRelative(c.name, lit.Val.String())
+	c.emit(runtime.OpInclude, c.addConst(runtime.Str(target)))
 }
 
 func (c *compiler) expr(e Expr) {
@@ -387,7 +408,7 @@ func (c *compiler) compileCall(n *CallExpr) {
 	case *IdentExpr:
 		idx, ok := c.resolveCallable(target.Name, false)
 		if !ok {
-			c.fail("unknown function %q", target.Name)
+			c.fail(n.Pos, "unknown function %q", target.Name)
 			return
 		}
 		for _, a := range n.Args {
@@ -401,14 +422,14 @@ func (c *compiler) compileCall(n *CallExpr) {
 		}
 		c.emit(runtime.OpCallMethod, packCall(c.addConst(runtime.Str(target.Name)), len(n.Args)))
 	default:
-		c.fail("expression is not callable")
+		c.fail(n.Pos, "expression is not callable")
 	}
 }
 
 func (c *compiler) compileFilter(n *FilterExpr) {
 	idx, ok := c.resolveCallable(n.Name, true)
 	if !ok {
-		c.fail("unknown filter %q", n.Name)
+		c.fail(n.Pos, "unknown filter %q", n.Name)
 		return
 	}
 	c.expr(n.X)
@@ -446,8 +467,9 @@ func binaryOp(t TokenType) runtime.Op {
 		return runtime.OpLte
 	case TGte:
 		return runtime.OpGte
+	default:
+		panic(fmt.Sprintf("veloz internal error: token %s is not a binary operator", t))
 	}
-	return runtime.OpNil
 }
 
 func packCall(index, argc int) int { return index<<8 | argc&0xff }

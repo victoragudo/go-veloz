@@ -53,6 +53,7 @@ type Token struct {
 	Type TokenType
 	Val  string
 	Line int
+	Col  int
 }
 
 var keywords = map[string]TokenType{

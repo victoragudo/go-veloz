@@ -68,9 +68,15 @@ func (ip *Interp) Run(prog *Program, data Value, blocks map[string]*Program) ([]
 	return ip.out, nil
 }
 
-const minStackCap = 32
+const (
+	minStackCap   = 32
+	maxFrameDepth = 64
+)
 
 func (ip *Interp) exec(prog *Program, data Value) error {
+	if ip.depth >= maxFrameDepth {
+		return fmt.Errorf("template nesting deeper than %d frames, check for include or inheritance cycles", maxFrameDepth)
+	}
 	if ip.depth >= len(ip.frames) {
 		ip.frames = append(ip.frames, frame{})
 	}
@@ -108,7 +114,7 @@ func buildIter(spec *LoopSpec, coll Value) iterState {
 		return it
 	}
 	rv := reflect.ValueOf(coll.obj)
-	for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
+	for rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface {
 		if rv.IsNil() {
 			return it
 		}
@@ -127,6 +133,8 @@ func buildIter(spec *LoopSpec, coll Value) iterState {
 		})
 		it.keys = keys
 		it.length = len(keys)
+	default:
+		return it
 	}
 	return it
 }
@@ -268,7 +276,12 @@ func (ip *Interp) runFrame(prog *Program, data Value, frameIdx int) error {
 				ip.out = out
 				return err
 			}
-			stack[len(stack)-1] = Bool(cmpResult(in.Op, cmp))
+			res, err := cmpResult(in.Op, cmp)
+			if err != nil {
+				ip.out = out
+				return err
+			}
+			stack[len(stack)-1] = Bool(res)
 
 		case OpIn:
 			seq := stack[len(stack)-1]
@@ -376,11 +389,13 @@ func (ip *Interp) runFrame(prog *Program, data Value, frameIdx int) error {
 		case OpInclude:
 			name := consts[in.Arg].str
 			if ip.loader == nil {
+				ip.out = out
 				return fmt.Errorf("include %q: no loader configured", name)
 			}
-			sub, ok := ip.loader.Load(name)
-			if !ok {
-				return fmt.Errorf("include %q: template not found", name)
+			sub, err := ip.loader.LoadProgram(name)
+			if err != nil {
+				ip.out = out
+				return fmt.Errorf("include %q: %w", name, err)
 			}
 			ip.out = out
 			if err := ip.exec(sub, data); err != nil {
@@ -416,20 +431,22 @@ func binaryArith(op Op, a, b Value) (Value, error) {
 		return arithMod(a, b)
 	case OpPow:
 		return arithPow(a, b)
+	default:
+		return Nil(), fmt.Errorf("invalid arithmetic op")
 	}
-	return Nil(), fmt.Errorf("invalid arithmetic op")
 }
 
-func cmpResult(op Op, cmp int) bool {
+func cmpResult(op Op, cmp int) (bool, error) {
 	switch op {
 	case OpLt:
-		return cmp < 0
+		return cmp < 0, nil
 	case OpGt:
-		return cmp > 0
+		return cmp > 0, nil
 	case OpLte:
-		return cmp <= 0
+		return cmp <= 0, nil
 	case OpGte:
-		return cmp >= 0
+		return cmp >= 0, nil
+	default:
+		return false, fmt.Errorf("invalid comparison op %d", op)
 	}
-	return false
 }

@@ -74,9 +74,7 @@ type Program struct {
 }
 
 type Loader interface {
-	Load(name string) (*Program, bool)
+	LoadProgram(name string) (*Program, error)
 }
-
-func packCall(index, argc int) int { return index<<8 | argc&0xff }
 
 func unpackCall(arg int) (index, argc int) { return arg >> 8, arg & 0xff }

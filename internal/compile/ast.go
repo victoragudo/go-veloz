@@ -2,6 +2,11 @@ package compile
 
 import "github.com/victoragudo/go-veloz/internal/runtime"
 
+type Pos struct {
+	Line int
+	Col  int
+}
+
 type Node interface{ node() }
 
 type TextNode struct{ Text string }
@@ -32,7 +37,10 @@ type BlockNode struct {
 	Body []Node
 }
 
-type IncludeNode struct{ Name Expr }
+type IncludeNode struct {
+	Name Expr
+	Pos  Pos
+}
 
 func (*TextNode) node()    {}
 func (*PrintNode) node()   {}
@@ -164,12 +172,14 @@ type LogicalExpr struct {
 type CallExpr struct {
 	Target Expr
 	Args   []Expr
+	Pos    Pos
 }
 
 type FilterExpr struct {
 	X    Expr
 	Name string
 	Args []Expr
+	Pos  Pos
 }
 
 type ArrayExpr struct{ Elems []Expr }

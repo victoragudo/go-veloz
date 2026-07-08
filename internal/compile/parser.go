@@ -69,7 +69,11 @@ func (p *parser) expect(tt TokenType) (Token, error) {
 }
 
 func (p *parser) errf(format string, args ...any) error {
-	return fmt.Errorf("line %d: %s", p.cur().Line, fmt.Sprintf(format, args...))
+	return fmt.Errorf("%d:%d: %s", p.cur().Line, p.cur().Col, fmt.Sprintf(format, args...))
+}
+
+func (p *parser) here() Pos {
+	return Pos{Line: p.cur().Line, Col: p.cur().Col}
 }
 
 func (p *parser) parseBody(stops map[string]bool) ([]Node, string, error) {
@@ -293,6 +297,7 @@ func (p *parser) parseBlock() (Node, error) {
 
 func (p *parser) parseInclude() (Node, error) {
 	p.advance()
+	pos := p.here()
 	name, err := p.parseExpr()
 	if err != nil {
 		return nil, err
@@ -300,7 +305,7 @@ func (p *parser) parseInclude() (Node, error) {
 	if _, err := p.expect(TBlockClose); err != nil {
 		return nil, err
 	}
-	return &IncludeNode{Name: name}, nil
+	return &IncludeNode{Name: name, Pos: pos}, nil
 }
 
 func (p *parser) parseExtends() (Node, error) {
@@ -542,6 +547,7 @@ func (p *parser) parsePostfix() (Expr, error) {
 			}
 			node = &IndexExpr{Target: node, Index: idx}
 		case TLParen:
+			callPos := p.here()
 			p.advance()
 			args, err := p.parseArgs()
 			if err != nil {
@@ -550,9 +556,10 @@ func (p *parser) parsePostfix() (Expr, error) {
 			if _, err := p.expect(TRParen); err != nil {
 				return nil, err
 			}
-			node = &CallExpr{Target: node, Args: args}
+			node = &CallExpr{Target: node, Args: args, Pos: callPos}
 		case TPipe:
 			p.advance()
+			filterPos := p.here()
 			fname, err := p.expect(TIdent)
 			if err != nil {
 				return nil, err
@@ -568,7 +575,7 @@ func (p *parser) parsePostfix() (Expr, error) {
 					return nil, err
 				}
 			}
-			node = &FilterExpr{X: node, Name: fname.Val, Args: fargs}
+			node = &FilterExpr{X: node, Name: fname.Val, Args: fargs, Pos: filterPos}
 		default:
 			return node, nil
 		}

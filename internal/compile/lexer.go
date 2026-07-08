@@ -6,11 +6,12 @@ import (
 )
 
 type lexer struct {
-	src      string
-	pos      int
-	line     int
-	toks     []Token
-	trimNext bool
+	src       string
+	pos       int
+	line      int
+	lineStart int
+	toks      []Token
+	trimNext  bool
 }
 
 func Lex(src string) ([]Token, error) {
@@ -18,12 +19,21 @@ func Lex(src string) ([]Token, error) {
 	if err := lx.run(); err != nil {
 		return nil, err
 	}
-	lx.emit(TEOF, "")
+	lx.emitAt(TEOF, "", lx.pos)
 	return lx.toks, nil
 }
 
-func (lx *lexer) emit(t TokenType, v string) {
-	lx.toks = append(lx.toks, Token{Type: t, Val: v, Line: lx.line})
+func (lx *lexer) col(offset int) int { return offset - lx.lineStart + 1 }
+
+func (lx *lexer) emitAt(t TokenType, v string, start int) {
+	lx.toks = append(lx.toks, Token{Type: t, Val: v, Line: lx.line, Col: lx.col(start)})
+}
+
+func (lx *lexer) advanceLines(s string, base int) {
+	if i := strings.LastIndexByte(s, '\n'); i >= 0 {
+		lx.line += strings.Count(s, "\n")
+		lx.lineStart = base + i + 1
+	}
 }
 
 func (lx *lexer) run() error {
@@ -60,22 +70,23 @@ func (lx *lexer) findOpen() int {
 }
 
 func (lx *lexer) pushText(s string) {
+	base := lx.pos
+	val := s
 	if lx.trimNext {
-		s = strings.TrimLeft(s, " \t\r\n")
+		val = strings.TrimLeft(s, " \t\r\n")
 		lx.trimNext = false
 	}
-	lx.countLines(s)
-	if s == "" {
-		return
+	prefix := s[:len(s)-len(val)]
+	lx.advanceLines(prefix, base)
+	start := base + len(prefix)
+	if val != "" {
+		lx.emitAt(TText, val, start)
 	}
-	lx.emit(TText, s)
-}
-
-func (lx *lexer) countLines(s string) {
-	lx.line += strings.Count(s, "\n")
+	lx.advanceLines(val, start)
 }
 
 func (lx *lexer) lexTag() error {
+	start := lx.pos
 	kind := lx.src[lx.pos+1]
 	trimLeft := false
 	adv := 2
@@ -93,10 +104,10 @@ func (lx *lexer) lexTag() error {
 	case '#':
 		return lx.skipComment()
 	case '{':
-		lx.emit(TVarOpen, "")
+		lx.emitAt(TVarOpen, "", start)
 		return lx.lexExpr(TVarClose)
 	case '%':
-		lx.emit(TBlockOpen, "")
+		lx.emitAt(TBlockOpen, "", start)
 		return lx.lexExpr(TBlockClose)
 	}
 	return nil
@@ -105,10 +116,10 @@ func (lx *lexer) lexTag() error {
 func (lx *lexer) skipComment() error {
 	end := strings.Index(lx.src[lx.pos:], "#}")
 	if end < 0 {
-		return fmt.Errorf("line %d: unclosed comment", lx.line)
+		return fmt.Errorf("%d:%d: unclosed comment", lx.line, lx.col(lx.pos))
 	}
 	body := lx.src[lx.pos : lx.pos+end]
-	lx.countLines(body)
+	lx.advanceLines(body, lx.pos)
 	lx.pos += end + 2
 	if strings.HasSuffix(body, "-") {
 		lx.trimNext = true
@@ -124,17 +135,19 @@ func (lx *lexer) lexExpr(closer TokenType) error {
 	for {
 		lx.skipSpace()
 		if lx.pos >= len(lx.src) {
-			return fmt.Errorf("line %d: unclosed tag", lx.line)
+			return fmt.Errorf("%d:%d: unclosed tag", lx.line, lx.col(lx.pos))
 		}
 		if lx.src[lx.pos] == '-' && strings.HasPrefix(lx.src[lx.pos+1:], closeStr) {
+			start := lx.pos
 			lx.trimNext = true
 			lx.pos += 1 + len(closeStr)
-			lx.emit(closer, "")
+			lx.emitAt(closer, "", start)
 			return nil
 		}
 		if strings.HasPrefix(lx.src[lx.pos:], closeStr) {
+			start := lx.pos
 			lx.pos += len(closeStr)
-			lx.emit(closer, "")
+			lx.emitAt(closer, "", start)
 			return nil
 		}
 		if err := lx.lexToken(); err != nil {
@@ -148,6 +161,7 @@ func (lx *lexer) skipSpace() {
 		c := lx.src[lx.pos]
 		if c == '\n' {
 			lx.line++
+			lx.lineStart = lx.pos + 1
 			lx.pos++
 		} else if c == ' ' || c == '\t' || c == '\r' {
 			lx.pos++
@@ -187,10 +201,10 @@ func (lx *lexer) lexIdent() error {
 	}
 	word := lx.src[start:lx.pos]
 	if kw, ok := keywords[word]; ok {
-		lx.emit(kw, word)
+		lx.emitAt(kw, word, start)
 		return nil
 	}
-	lx.emit(TIdent, word)
+	lx.emitAt(TIdent, word, start)
 	return nil
 }
 
@@ -223,21 +237,22 @@ func (lx *lexer) lexNumber() error {
 		}
 	}
 	if isFloat {
-		lx.emit(TFloat, lx.src[start:lx.pos])
+		lx.emitAt(TFloat, lx.src[start:lx.pos], start)
 	} else {
-		lx.emit(TInt, lx.src[start:lx.pos])
+		lx.emitAt(TInt, lx.src[start:lx.pos], start)
 	}
 	return nil
 }
 
 func (lx *lexer) lexString(quote byte) error {
+	startLine, startCol := lx.line, lx.col(lx.pos)
 	lx.pos++
 	var sb strings.Builder
 	for lx.pos < len(lx.src) {
 		c := lx.src[lx.pos]
 		if c == quote {
 			lx.pos++
-			lx.emit(TString, sb.String())
+			lx.toks = append(lx.toks, Token{Type: TString, Val: sb.String(), Line: startLine, Col: startCol})
 			return nil
 		}
 		if c == '\\' && lx.pos+1 < len(lx.src) {
@@ -264,97 +279,63 @@ func (lx *lexer) lexString(quote byte) error {
 		}
 		if c == '\n' {
 			lx.line++
+			lx.lineStart = lx.pos + 1
 		}
 		sb.WriteByte(c)
 		lx.pos++
 	}
-	return fmt.Errorf("line %d: unterminated string", lx.line)
+	return fmt.Errorf("%d:%d: unterminated string", startLine, startCol)
+}
+
+var twoCharOps = map[string]TokenType{
+	"==": TEq,
+	"!=": TNeq,
+	"<=": TLte,
+	">=": TGte,
+	"**": TPow,
+	"&&": TAnd,
+	"||": TOr,
+}
+
+var oneCharOps = map[byte]TokenType{
+	'+': TPlus,
+	'-': TMinus,
+	'*': TStar,
+	'/': TSlash,
+	'%': TPercent,
+	'~': TTilde,
+	'|': TPipe,
+	'.': TDot,
+	',': TComma,
+	':': TColon,
+	'(': TLParen,
+	')': TRParen,
+	'[': TLBracket,
+	']': TRBracket,
+	'{': TLBrace,
+	'}': TRBrace,
+	'=': TAssign,
+	'<': TLt,
+	'>': TGt,
+	'!': TNot,
+	'?': TQuestion,
 }
 
 func (lx *lexer) lexOperator() error {
-	rest := lx.src[lx.pos:]
-	two := ""
-	if len(rest) >= 2 {
-		two = rest[:2]
+	start := lx.pos
+	if start+1 < len(lx.src) {
+		two := lx.src[start : start+2]
+		if tt, ok := twoCharOps[two]; ok {
+			lx.pos += 2
+			lx.emitAt(tt, two, start)
+			return nil
+		}
 	}
-	switch two {
-	case "==":
-		lx.pos += 2
-		lx.emit(TEq, two)
-		return nil
-	case "!=":
-		lx.pos += 2
-		lx.emit(TNeq, two)
-		return nil
-	case "<=":
-		lx.pos += 2
-		lx.emit(TLte, two)
-		return nil
-	case ">=":
-		lx.pos += 2
-		lx.emit(TGte, two)
-		return nil
-	case "**":
-		lx.pos += 2
-		lx.emit(TPow, two)
-		return nil
-	case "&&":
-		lx.pos += 2
-		lx.emit(TAnd, two)
-		return nil
-	case "||":
-		lx.pos += 2
-		lx.emit(TOr, two)
+	c := lx.src[start]
+	if tt, ok := oneCharOps[c]; ok {
+		lx.pos++
+		lx.emitAt(tt, string(c), start)
 		return nil
 	}
-
-	c := lx.src[lx.pos]
-	lx.pos++
-	switch c {
-	case '+':
-		lx.emit(TPlus, "+")
-	case '-':
-		lx.emit(TMinus, "-")
-	case '*':
-		lx.emit(TStar, "*")
-	case '/':
-		lx.emit(TSlash, "/")
-	case '%':
-		lx.emit(TPercent, "%")
-	case '~':
-		lx.emit(TTilde, "~")
-	case '|':
-		lx.emit(TPipe, "|")
-	case '.':
-		lx.emit(TDot, ".")
-	case ',':
-		lx.emit(TComma, ",")
-	case ':':
-		lx.emit(TColon, ":")
-	case '(':
-		lx.emit(TLParen, "(")
-	case ')':
-		lx.emit(TRParen, ")")
-	case '[':
-		lx.emit(TLBracket, "[")
-	case ']':
-		lx.emit(TRBracket, "]")
-	case '{':
-		lx.emit(TLBrace, "{")
-	case '}':
-		lx.emit(TRBrace, "}")
-	case '=':
-		lx.emit(TAssign, "=")
-	case '<':
-		lx.emit(TLt, "<")
-	case '>':
-		lx.emit(TGt, ">")
-	case '!':
-		lx.emit(TNot, "!")
-	case '?':
-		lx.emit(TQuestion, "?")
-	default:
-		return fmt.Errorf("line %d: unexpected character %q", lx.line, string(c))
-	}
-	return nil
+	return fmt.Errorf("%d:%d: unexpected character %q", lx.line, lx.col(start), string(c))
 }
